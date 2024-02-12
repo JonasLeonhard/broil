@@ -55,18 +55,25 @@ function Tree:renderNode(node, render_index)
     vim.api.nvim_command('highlight BroilDirLine guifg=#89b4fa')
     vim.api.nvim_buf_add_highlight(ui.buf_id, -1, 'BroilDirLine', render_index, 0, -1)
 
-    vim.fn.sign_define('Broil_dir', { text = ' ', texthl = 'Broil_dir' })
+    vim.fn.sign_define('Broil_dir', { text = '', texthl = 'Broil_dir' })
     vim.fn.sign_place(render_index + 1, '', 'Broil_dir', ui.buf_id, { lnum = render_index + 1 })
     vim.api.nvim_command('highlight Broil_dir guifg=#89b4fa')
   else
     -- file icon and highlight color from nvim-web-devicons
-    local line_filetype = rendered_line:match("^.+%.(.+)$")
+    local line_filetype = rendered_line:match("%.([^%.]+)$")
 
-    local sign_id = 'Broil_' .. line_filetype
-    local icon, color = dev_icons.get_icon_color(rendered_line, line_filetype, nil)
-    vim.fn.sign_define(sign_id, { text = icon, texthl = sign_id })
-    vim.fn.sign_place(render_index + 1, '', sign_id, ui.buf_id, { lnum = render_index + 1 })
-    vim.api.nvim_command('highlight ' .. sign_id .. ' guifg=' .. color)
+
+    if (line_filetype) then
+      line_filetype = line_filetype:gsub("%W", "_") -- This will replace any character that is not a letter or a digit with an underscore, ensuring that `line_filetype` is always a valid group name.
+      local sign_id = 'Broil_' .. line_filetype
+      local icon, color = dev_icons.get_icon_color(rendered_line, line_filetype, nil)
+      vim.fn.sign_define(sign_id, { text = icon, texthl = sign_id })
+      vim.fn.sign_place(render_index + 1, '', sign_id, ui.buf_id, { lnum = render_index + 1 })
+      vim.api.nvim_command('highlight ' .. sign_id .. ' guifg=' .. color)
+    else
+      vim.fn.sign_define('Broil_file', { text = '', texthl = 'Broil_file' })
+      vim.fn.sign_place(render_index + 1, '', 'Broil_file', ui.buf_id, { lnum = render_index + 1 })
+    end
   end
 
   return rendered_line
