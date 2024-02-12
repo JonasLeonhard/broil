@@ -1,6 +1,7 @@
 local ui = {
   buf_id = nil,
   win_id = nil,
+  search = "todo_current_search_term",
   float_win = {
     relative = "editor",
     width = vim.o.columns,                 -- 100% width
@@ -148,7 +149,7 @@ ui.open_float = function()
   if file_dir == "" then
     file_dir = vim.fn.getcwd() or "root"
   end
-  ui.float_win.title = file_dir
+  ui.float_win.title = " " .. file_dir .. " | 󱁴 : " .. ui.search
 
   ui.render_tree(file_dir)
   ui.win_id = vim.api.nvim_open_win(ui.buf_id, true, ui.float_win) -- Open a focused floating window
