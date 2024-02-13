@@ -1,11 +1,13 @@
 local ui = {
   buf_id = nil,
   win_id = nil,
+  search_win_id = nil,
   search = "todo_current_search_term",
+  mode = "tree", -- tree or buffer
   float_win = {
     relative = "editor",
-    width = vim.o.columns,                 -- 100% width
-    height = math.ceil(vim.o.lines * 0.6), -- 60% height
+    width = vim.o.columns,                     -- 100% width
+    height = math.ceil(vim.o.lines * 0.6) - 1, -- 60% height
     col = 0,
     row = vim.o.lines,
     style = "minimal",
@@ -21,10 +23,20 @@ local ui = {
       { "│", "BroilFloatBorder" },
     },
     zindex = 50,
+  },
+  search_win = {
+    relative = "editor",
+    width = vim.o.columns, -- 100% width
+    height = 1,            -- 60% height
+    col = 0,
+    row = vim.o.lines - 1,
+    style = "minimal",
+    zindex = 51,
   }
 }
 
 local dev_icons = require('nvim-web-devicons')
+local config = require('broil.config')
 
 local Tree = {
   buf_id = nil,
@@ -113,11 +125,13 @@ ui.create_nodes = function(dir, depth)
   for path, type in vim.fs.dir(dir, { depth = 1 }) do
     local node = Tree:Node(path, type, depth, {})
 
-    if type == "directory" then
+    if type == "directory" and config.special_paths[path] ~= 'no-enter' then
       node.children = ui.create_nodes(dir .. "/" .. path, depth + 1)
     end
 
-    table.insert(nodes, node)
+    if config.special_paths[path] ~= 'hide' then
+      table.insert(nodes, node)
+    end
   end
 
   return nodes
@@ -134,13 +148,17 @@ ui.on_edits_made_listener = function()
   })
 end
 
+ui.on_search_input = function(text)
+  print("search input", text)
+end
+
 ui.help = function()
   print("broil help")
 end
 
 --- open a floating window with a tree view of the current file's directory
 ui.open_float = function()
-  -- create a modifiable buffer
+  -- 1. create a search results buffer and window
   ui.buf_id = vim.api.nvim_create_buf(false, true)
   vim.b[ui.buf_id].modifiable = true
 
@@ -149,13 +167,22 @@ ui.open_float = function()
   if file_dir == "" then
     file_dir = vim.fn.getcwd() or "root"
   end
-  ui.float_win.title = " " .. file_dir .. " | 󱁴 : " .. ui.search
+  ui.float_win.title = " " .. file_dir .. "| [" .. ui.mode .. "]"
 
   ui.render_tree(file_dir)
-  ui.win_id = vim.api.nvim_open_win(ui.buf_id, true, ui.float_win) -- Open a focused floating window
+  ui.win_id = vim.api.nvim_open_win(ui.buf_id, false, ui.float_win) -- Open a floating search_results window
 
-  -- attach event listeners
+  -- 2. create a search propmt at the bottom
+  ui.search_buf_id = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_option(ui.search_buf_id, 'buftype', 'prompt') -- Set buffer type to prompt
+  vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width) -- Set text width to the width of the window
+  vim.fn.prompt_setprompt(ui.search_buf_id, '󰱼 : ') -- Set prompt text
+  ui.search_win_id = vim.api.nvim_open_win(ui.search_buf_id, true, ui.search_win) -- Open a floating focused search window
+
+
+  -- 3. attach event listeners
   ui.on_edits_made_listener()
+  vim.fn.prompt_setcallback(ui.search_buf_id, ui.on_search_input)
 end
 
 return ui

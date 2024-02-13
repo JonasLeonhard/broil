@@ -2,6 +2,21 @@ local config = {
   mappings = {
     synchronize = '<C-y>',
     help = '?',
+  },
+  special_paths = {
+    ["media"] = "no-enter",
+    [".git"] = "no-enter",
+    ["node_modules"] = "no-enter",
+    ["vendor"] = "no-enter",
+    [".svelte-kit"] = "no-enter",
+    ["dist"] = "no-enter",
+    ["target"] = "no-enter",
+    ["debug"] = "no-enter",
+    ["release"] = "no-enter",
+    ["build"] = "no-enter",
+    ["tmp"] = "no-enter",
+    [".next"] = "no-enter",
+    [".DS_Store"] = "hide",
   }
 }
 
