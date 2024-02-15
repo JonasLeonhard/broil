@@ -40,21 +40,42 @@ local config = require('broil.config')
 
 local Tree = {
   buf_id = nil,
+  selected_render_index = nil,
   nodes = {}
 }
 
-function Tree:Node(path, type, depth, children)
-  return {
-    path = path,
-    type = type,
-    depth = depth,
-    children = children or {}
+function Tree:Node(node_option)
+  local node = {
+    id = string.format('%s_%s', node_option.index, node_option.depth),
+    parent_id = nil,
+    path = node_option.path,
+    type = node_option.type,
+    index = node_option.index,
+    render_index = nil, -- set before rendering the node
+    depth = node_option.depth,
+    children = node_option.children or {}
   }
+
+  if (node_option.parent_index) then
+    node.parent_id = string.format('%s_%s', node_option.parent_index, node_option.depth - 1)
+  end
+
+  return node
 end
 
 function Tree:renderNode(node, render_index)
   local indent = string.rep("  ", node.depth)
-  local rendered_line = indent .. node.path
+  node.render_index = render_index;
+
+  local is_selected = self.selected_render_index == node.render_index
+
+  local rendered_line = indent ..
+      node.path ..
+      ' ID: ' ..
+      node.id ..
+      ' ,Parent: ' ..
+      node.parent_id ..
+      ' ,index: ' .. node.index .. ' ,render_index: ' .. node.render_index .. ' ,is_selected: ' .. tostring(is_selected)
 
   if node.type == "directory" then
     rendered_line = rendered_line .. "/"
@@ -97,41 +118,58 @@ function Tree:render(nodes, depth, current_line_index)
   local rendered_lines = 0
 
   for _, node in ipairs(nodes) do
-    local render_index = current_line_index + rendered_lines
+    local render_index = (current_line_index or 0) + rendered_lines
 
     Tree:renderNode(node, render_index)
     rendered_lines = rendered_lines + 1
 
     -- render node children recursively
     if node.type == "directory" then
-      rendered_lines = rendered_lines + self:render(node.children, depth + 1, render_index + 1)
+      rendered_lines = rendered_lines + self:render(node.children, (depth or 0) + 1, render_index + 1)
     end
   end
 
   return rendered_lines
 end
 
+ui.clear = function()
+  vim.api.nvim_buf_set_lines(ui.buf_id, 0, -1, false, {})
+end
+
+
 --- scan the file system at dir and create a tree view for the buffer
-ui.render_tree = function(dir)
+ui.create_tree_and_render = function(dir)
   vim.wo.signcolumn = 'yes'
-  local nodes = ui.create_nodes(dir, 0)
-  Tree:render(nodes, 0, 0)
+  local nodes = ui.create_nodes(dir, 0, 0)
+  Tree.nodes = nodes
+  ui.clear()
+  Tree:render(nodes)
 end
 
 --- recursively create nodes for the tree view
-ui.create_nodes = function(dir, depth)
+ui.create_nodes = function(dir, parent_node_index, depth)
   local nodes = {}
 
+  local node_index = 0
   for path, type in vim.fs.dir(dir, { depth = 1 }) do
-    local node = Tree:Node(path, type, depth, {})
+    local node = Tree:Node({
+      index = node_index,
+      parent_index = parent_node_index,
+      depth = depth,
+      path = path,
+      type = type,
+      children = {}
+    })
 
     if type == "directory" and config.special_paths[path] ~= 'no-enter' then
-      node.children = ui.create_nodes(dir .. "/" .. path, depth + 1)
+      node.children = ui.create_nodes(dir .. "/" .. path, node_index, depth + 1)
     end
 
     if config.special_paths[path] ~= 'hide' then
       table.insert(nodes, node)
     end
+
+    node_index = node_index + 1
   end
 
   return nodes
@@ -149,7 +187,13 @@ ui.on_edits_made_listener = function()
 end
 
 ui.on_search_input = function(text)
-  print("search input", text)
+  if (Tree.selected_render_index == nil) then
+    Tree.selected_render_index = 0
+  else
+    Tree.selected_render_index = Tree.selected_render_index + 1
+  end
+  ui.clear()
+  Tree:render(Tree.nodes, 123) -- todo, probable better to just update line highlights and not rerender the whole tree?
 end
 
 ui.help = function()
@@ -169,7 +213,7 @@ ui.open_float = function()
   end
   ui.float_win.title = " " .. file_dir .. "| [" .. ui.mode .. "]"
 
-  ui.render_tree(file_dir)
+  ui.create_tree_and_render(file_dir)
   ui.win_id = vim.api.nvim_open_win(ui.buf_id, false, ui.float_win) -- Open a floating search_results window
 
   -- 2. create a search propmt at the bottom
