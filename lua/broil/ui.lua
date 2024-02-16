@@ -32,7 +32,7 @@ local ui = {
     row = vim.o.lines - 1,
     style = "minimal",
     zindex = 51,
-  }
+  },
 }
 
 local dev_icons = require('nvim-web-devicons')
@@ -132,6 +132,22 @@ function Tree:render(nodes, depth, current_line_index)
   return rendered_lines
 end
 
+-- TODO: implement
+function Tree:filter(nodes, search_term)
+  print(search_term)
+  for i = 1, #search_term do
+    local c = search_term:sub(i, i)
+    print(c, string.byte(c))
+  end
+
+  if (search_term == 'lua') then
+    print("in if", search_term)
+    return { nodes[2] }
+  end
+
+  return nodes
+end
+
 ui.clear = function()
   vim.api.nvim_buf_set_lines(ui.buf_id, 0, -1, false, {})
 end
@@ -186,14 +202,22 @@ ui.on_edits_made_listener = function()
   })
 end
 
-ui.on_search_input = function(text)
-  if (Tree.selected_render_index == nil) then
-    Tree.selected_render_index = 0
-  else
-    Tree.selected_render_index = Tree.selected_render_index + 1
-  end
-  ui.clear()
-  Tree:render(Tree.nodes, 123) -- todo, probable better to just update line highlights and not rerender the whole tree?
+ui.on_search_input_listener = function()
+  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+    buffer = ui.search_buf_id,
+    callback = function()
+      local search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
+
+      if (Tree.selected_render_index == nil) then
+        Tree.selected_render_index = 0
+      else
+        Tree.selected_render_index = Tree.selected_render_index + 1
+      end
+      ui.clear()
+      local filtered_nodes = Tree:filter(Tree.nodes, search_term)
+      Tree:render(filtered_nodes)
+    end
+  })
 end
 
 ui.help = function()
@@ -218,15 +242,13 @@ ui.open_float = function()
 
   -- 2. create a search propmt at the bottom
   ui.search_buf_id = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(ui.search_buf_id, 'buftype', 'prompt') -- Set buffer type to prompt
   vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width) -- Set text width to the width of the window
-  vim.fn.prompt_setprompt(ui.search_buf_id, '󰱼 : ') -- Set prompt text
   ui.search_win_id = vim.api.nvim_open_win(ui.search_buf_id, true, ui.search_win) -- Open a floating focused search window
 
 
   -- 3. attach event listeners
   ui.on_edits_made_listener()
-  vim.fn.prompt_setcallback(ui.search_buf_id, ui.on_search_input)
+  ui.on_search_input_listener()
 end
 
 return ui
