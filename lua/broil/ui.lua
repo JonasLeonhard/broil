@@ -34,8 +34,8 @@ local ui = {
     zindex = 51,
   },
   search_term = "", -- current search filter
-  selection_ns_id = vim.api.nvim_create_namespace('BroilSelection')
-
+  selection_ns_id = vim.api.nvim_create_namespace('BroilSelection'),
+  search_term_ns_id = vim.api.nvim_create_namespace('BroilSearchTerm'),
 }
 
 local dev_icons = require('nvim-web-devicons')
@@ -56,9 +56,9 @@ function Tree:Node(node_option)
     full_path = node_option.full_path,
     relative_path = node_option.relative_path, -- relative from open dir
     path = node_option.path,                   -- file or dir name
-    type = node_option.type,
+    type = node_option.type,                   -- "file", "directory", "link", "fifo", "socket", "char", "block", "unknown"
     index = node_option.index,
-    render_index = nil, -- set before rendering the node
+    render_index = nil,                        -- set before rendering the node
     depth = node_option.depth,
     children = node_option.children or {}
   }
@@ -118,8 +118,10 @@ function Tree:renderNode(node, render_index)
   local match_indices = utils.fuzzy_match(node.relative_path, ui.search_term)
   if match_indices then
     vim.api.nvim_command('highlight BroilSearchTerm guifg=#f9e2af')
+    vim.api.nvim_buf_clear_namespace(ui.buf_id, ui.search_term_ns_id, 0, -1)
     for _, idx in ipairs(match_indices) do
-      vim.api.nvim_buf_add_highlight(ui.buf_id, -1, 'BroilSearchTerm', render_index, #indent + idx - 1, #indent + idx)
+      vim.api.nvim_buf_add_highlight(ui.buf_id, ui.search_term_ns_id, 'BroilSearchTerm', render_index, #indent + idx - 1,
+        #indent + idx)
     end
   end
 
@@ -207,6 +209,25 @@ function Tree:filter(nodes, search_term)
   return filtered
 end
 
+--- recursively find a node by a key with value. in the following case the first node with render_index == 1
+--- eg: Tree:find_by('render_index', 1)
+function Tree:find_by(key, value)
+  -- Recursive function to search in children nodes
+  local function searchInNodes(nodes)
+    for _, node in ipairs(nodes) do
+      if node[key] == value then
+        return node
+      end
+      local found = searchInNodes(node.children)
+      if found then
+        return found
+      end
+    end
+  end
+
+  return searchInNodes(self.nodes)
+end
+
 ui.clear = function()
   vim.api.nvim_buf_set_lines(ui.buf_id, 0, -1, false, {})
 end
@@ -219,7 +240,14 @@ ui.create_tree_and_render = function(dir)
   local nodes = ui.create_nodes(dir, 0, 0)
   Tree.nodes = nodes
   ui.clear()
+  Tree.selected_render_index = nil
   Tree:render(nodes)
+
+  if (ui.win_id ~= nil) then
+    vim.api.nvim_win_close(ui.win_id, true)
+  end
+  ui.float_win.title = " " .. Tree.root_path .. "| [" .. ui.mode .. "]"
+  ui.win_id = vim.api.nvim_open_win(ui.buf_id, false, ui.float_win)
 end
 
 --- recursively create nodes for the tree view
@@ -299,7 +327,11 @@ ui.select_prev_node = function()
   local new_index = (Tree.selected_render_index or #lines - 1) - 1
 
   if (new_index < 0) then
-    Tree.selected_render_index = #lines - 2
+    local last_line_index = #lines - 2
+    if (last_line_index < 0) then
+      return
+    end
+    Tree.selected_render_index = last_line_index
   else
     Tree.selected_render_index = new_index
   end
@@ -307,7 +339,36 @@ ui.select_prev_node = function()
   Tree:render_selection()
 end
 
+ui.open_selected_node = function()
+  if (Tree.selected_render_index == nil) then
+    return
+  end
+
+  local node = Tree:find_by('render_index', Tree.selected_render_index)
+
+  if (node == nil) then
+    return
+  end
+
+  if (node.type == "directory") then
+    ui.create_tree_and_render(node.full_path)
+  else
+    ui.close_float()
+    vim.api.nvim_command('edit ' .. node.relative_path)
+  end
+end
+
+ui.open_parent_dir = function()
+  local parent_dir = vim.fn.fnamemodify(Tree.root_path, ":h")
+  ui.create_tree_and_render(parent_dir)
+end
+
 ui.set_keybinds = function()
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'n', '<C-q>', '<cmd>lua require("broil.ui").close_float()<CR>',
+    { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'i', '<C-q>', '<cmd>lua require("broil.ui").close_float()<CR>',
+    { noremap = true, silent = true })
+
   vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'n', '<C-j>', '<cmd>lua require("broil.ui").select_next_node()<CR>',
     { noremap = true, silent = true })
   vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'i', '<C-j>', '<cmd>lua require("broil.ui").select_next_node()<CR>',
@@ -317,8 +378,22 @@ ui.set_keybinds = function()
     { noremap = true, silent = true })
   vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'i', '<C-k>', '<cmd>lua require("broil.ui").select_prev_node()<CR>',
     { noremap = true, silent = true })
-end
 
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'n', '<CR>', '<cmd>lua require("broil.ui").open_selected_node()<CR>',
+    { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'i', '<CR>', '<cmd>lua require("broil.ui").open_selected_node()<CR>',
+    { noremap = true, silent = true })
+
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'n', '<C-l>', '<cmd>lua require("broil.ui").open_selected_node()<CR>',
+    { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'i', '<C-l>', '<cmd>lua require("broil.ui").open_selected_node()<CR>',
+    { noremap = true, silent = true })
+
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'n', '<C-h>', '<cmd>lua require("broil.ui").open_parent_dir()<CR>',
+    { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'i', '<C-h>', '<cmd>lua require("broil.ui").open_parent_dir()<CR>',
+    { noremap = true, silent = true })
+end
 
 --- open a floating window with a tree view of the current file's directory
 ui.open_float = function()
@@ -331,22 +406,29 @@ ui.open_float = function()
   if file_dir == "" then
     file_dir = vim.fn.getcwd() or "root"
   end
-  ui.float_win.title = " " .. file_dir .. "| [" .. ui.mode .. "]"
 
+  -- 2. render
   ui.create_tree_and_render(file_dir)
-  ui.win_id = vim.api.nvim_open_win(ui.buf_id, false, ui.float_win) -- Open a floating search_results window
 
-  -- 2. create a search propmt at the bottom
+  -- 3. create a search prompt at the bottom
+  ui.search_term = ""
   ui.search_buf_id = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width) -- Set text width to the width of the window
   ui.search_win_id = vim.api.nvim_open_win(ui.search_buf_id, true, ui.search_win) -- Open a floating focused search window
   vim.api.nvim_command('startinsert')
 
 
-  -- 3. attach event listeners
+  -- 4. attach event listeners
   ui.on_edits_made_listener()
   ui.on_search_input_listener()
   ui.set_keybinds()
+end
+
+ui.close_float = function()
+  vim.api.nvim_win_close(ui.win_id, true)
+  vim.api.nvim_win_close(ui.search_win_id, true)
+  ui.win_id = nil
+  ui.search_win_id = nil
 end
 
 return ui
