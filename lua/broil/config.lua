@@ -1,7 +1,18 @@
 local config = {
   mappings = {
-    synchronize = '<C-y>',
+    -- general
     help = '?',
+
+    -- tree buffer
+    synchronize = '<C-y>', -- toggle tree and buffer view
+
+    -- search
+    close_float = '<C-q>',
+    select_next_node = '<C-j>',
+    select_prev_node = '<C-k>',
+    open_selected_node = '<CR>',
+    open_selected_node2 = '<C-l>',
+    open_parent_dir = '<C-h>'
   },
   special_paths = {
     ["media"] = "no-enter",
