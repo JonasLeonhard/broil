@@ -33,6 +33,7 @@ local ui = {
     style = "minimal",
     zindex = 51,
   },
+  search_term = "" -- current search filter
 }
 
 local dev_icons = require('nvim-web-devicons')
@@ -41,6 +42,7 @@ local config = require('broil.config')
 local Tree = {
   buf_id = nil,
   selected_render_index = nil,
+  root_path = nil,
   nodes = {}
 }
 
@@ -48,7 +50,9 @@ function Tree:Node(node_option)
   local node = {
     id = string.format('%s_%s', node_option.index, node_option.depth),
     parent_id = nil,
-    path = node_option.path,
+    full_path = node_option.full_path,
+    relative_path = node_option.relative_path, -- relative from open dir
+    path = node_option.path,                   -- file or dir name
     type = node_option.type,
     index = node_option.index,
     render_index = nil, -- set before rendering the node
@@ -69,8 +73,13 @@ function Tree:renderNode(node, render_index)
 
   local is_selected = self.selected_render_index == node.render_index
 
+  local render_path = node.path
+  if (ui.search_term ~= '') then
+    render_path = node.relative_path
+  end
+
   local rendered_line = indent ..
-      node.path ..
+      render_path ..
       ' ID: ' ..
       node.id ..
       ' ,Parent: ' ..
@@ -132,20 +141,48 @@ function Tree:render(nodes, depth, current_line_index)
   return rendered_lines
 end
 
--- TODO: implement
 function Tree:filter(nodes, search_term)
-  print(search_term)
-  for i = 1, #search_term do
-    local c = search_term:sub(i, i)
-    print(c, string.byte(c))
+  if search_term == "" then
+    return nodes
   end
 
-  if (search_term == 'lua') then
-    print("in if", search_term)
-    return { nodes[2] }
+  local function filter_nodes(node, path)
+    -- Create a copy of the node without .children
+    local new_node = {}
+    for k, v in pairs(node) do
+      if k ~= 'children' then
+        new_node[k] = v
+      end
+    end
+
+    -- Check if the current node or an ancestor matches the path
+    local current_matched = string.match(node.full_path, path)
+
+    -- Check the children nodes
+    for _, child in ipairs(node.children) do
+      local child_result = filter_nodes(child, path)
+      if child_result then
+        new_node.children = new_node.children or {}
+        table.insert(new_node.children, child_result)
+      end
+    end
+
+    -- If the node matches the path or has matching children, return it
+    if new_node.children or current_matched then
+      return new_node
+    end
   end
 
-  return nodes
+  -- create a filter
+  local filtered = {}
+  for _, node in ipairs(nodes) do
+    local node_result = filter_nodes(node, search_term)
+    if node_result then
+      table.insert(filtered, node_result)
+    end
+  end
+
+  return filtered
 end
 
 ui.clear = function()
@@ -156,6 +193,7 @@ end
 --- scan the file system at dir and create a tree view for the buffer
 ui.create_tree_and_render = function(dir)
   vim.wo.signcolumn = 'yes'
+  Tree.root_path = dir
   local nodes = ui.create_nodes(dir, 0, 0)
   Tree.nodes = nodes
   ui.clear()
@@ -173,6 +211,8 @@ ui.create_nodes = function(dir, parent_node_index, depth)
       parent_index = parent_node_index,
       depth = depth,
       path = path,
+      full_path = dir .. "/" .. path,
+      relative_path = string.gsub(dir .. "/" .. path, Tree.root_path .. "/", ""),
       type = type,
       children = {}
     })
@@ -206,7 +246,7 @@ ui.on_search_input_listener = function()
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
     buffer = ui.search_buf_id,
     callback = function()
-      local search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
+      ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
 
       if (Tree.selected_render_index == nil) then
         Tree.selected_render_index = 0
@@ -214,8 +254,8 @@ ui.on_search_input_listener = function()
         Tree.selected_render_index = Tree.selected_render_index + 1
       end
       ui.clear()
-      local filtered_nodes = Tree:filter(Tree.nodes, search_term)
-      Tree:render(filtered_nodes)
+      local filtered_nodes = Tree:filter(Tree.nodes, ui.search_term)
+      Tree:render(filtered_nodes, 0, 0)
     end
   })
 end
