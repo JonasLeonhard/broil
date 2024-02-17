@@ -46,7 +46,8 @@ local Tree = {
   buf_id = nil,
   selected_render_index = nil,
   root_path = nil,
-  nodes = {}
+  nodes = {},
+  rendered_nodes = {}
 }
 
 function Tree:Node(node_option)
@@ -225,7 +226,7 @@ function Tree:find_by(key, value)
     end
   end
 
-  return searchInNodes(self.nodes)
+  return searchInNodes(self.rendered_nodes)
 end
 
 ui.clear = function()
@@ -241,7 +242,9 @@ ui.create_tree_and_render = function(dir)
   Tree.nodes = nodes
   ui.clear()
   Tree.selected_render_index = nil
-  Tree:render(nodes)
+  local filtered = Tree:filter(nodes, ui.search_term)
+  Tree:render(filtered)
+  Tree.rendered_nodes = filtered
 
   if (ui.win_id ~= nil) then
     vim.api.nvim_win_close(ui.win_id, true)
@@ -301,6 +304,7 @@ ui.on_search_input_listener = function()
       local filtered_nodes = Tree:filter(Tree.nodes, ui.search_term)
       Tree.selected_render_index = nil -- TODO: select the node with the highest matching score
       Tree:render(filtered_nodes, 0, 0)
+      Tree.rendered_nodes = filtered_nodes
     end
   })
 end
@@ -351,10 +355,12 @@ ui.open_selected_node = function()
   end
 
   if (node.type == "directory") then
+    ui.set_search("")
     ui.create_tree_and_render(node.full_path)
   else
     ui.close_float()
-    vim.api.nvim_command('edit ' .. node.relative_path)
+    vim.api.nvim_command('edit ' .. node.full_path)
+    vim.api.nvim_command('stopinsert')
   end
 end
 
@@ -411,11 +417,11 @@ ui.open_float = function()
   ui.create_tree_and_render(file_dir)
 
   -- 3. create a search prompt at the bottom
-  ui.search_term = ""
   ui.search_buf_id = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width) -- Set text width to the width of the window
   ui.search_win_id = vim.api.nvim_open_win(ui.search_buf_id, true, ui.search_win) -- Open a floating focused search window
   vim.api.nvim_command('startinsert')
+  ui.set_search("")
 
 
   -- 4. attach event listeners
@@ -425,10 +431,20 @@ ui.open_float = function()
 end
 
 ui.close_float = function()
-  vim.api.nvim_win_close(ui.win_id, true)
-  vim.api.nvim_win_close(ui.search_win_id, true)
-  ui.win_id = nil
-  ui.search_win_id = nil
+  if (ui.win_id ~= nil) then
+    vim.api.nvim_win_close(ui.win_id, true)
+    ui.win_id = nil
+  end
+
+  if (ui.search_win_id ~= nil) then
+    vim.api.nvim_win_close(ui.search_win_id, true)
+    ui.search_win_id = nil
+  end
+end
+
+ui.set_search = function(search_term)
+  ui.search_term = search_term
+  vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { search_term })
 end
 
 return ui
