@@ -33,11 +33,14 @@ local ui = {
     style = "minimal",
     zindex = 51,
   },
-  search_term = "" -- current search filter
+  search_term = "", -- current search filter
+  selection_ns_id = vim.api.nvim_create_namespace('BroilSelection')
+
 }
 
 local dev_icons = require('nvim-web-devicons')
 local config = require('broil.config')
+local utils = require('broil.utils')
 
 local Tree = {
   buf_id = nil,
@@ -71,20 +74,12 @@ function Tree:renderNode(node, render_index)
   local indent = string.rep("  ", node.depth)
   node.render_index = render_index;
 
-  local is_selected = self.selected_render_index == node.render_index
-
   local render_path = node.path
   if (ui.search_term ~= '') then
     render_path = node.relative_path
   end
 
-  local rendered_line = indent ..
-      render_path ..
-      ' ID: ' ..
-      node.id ..
-      ' ,Parent: ' ..
-      node.parent_id ..
-      ' ,index: ' .. node.index .. ' ,render_index: ' .. node.render_index .. ' ,is_selected: ' .. tostring(is_selected)
+  local rendered_line = indent .. render_path
 
   if node.type == "directory" then
     rendered_line = rendered_line .. "/"
@@ -93,7 +88,7 @@ function Tree:renderNode(node, render_index)
   vim.api.nvim_buf_set_lines(ui.buf_id, render_index, render_index, false, { rendered_line })
 
   -- apply line highlights and icons as soon as the line rendered
-  if rendered_line:find('/') then
+  if rendered_line:match('/$') then
     -- Directories in blue + dir icon
     vim.api.nvim_command('highlight BroilDirLine guifg=#89b4fa')
     vim.api.nvim_buf_add_highlight(ui.buf_id, -1, 'BroilDirLine', render_index, 0, -1)
@@ -119,12 +114,37 @@ function Tree:renderNode(node, render_index)
     end
   end
 
+  -- seach_term highlight
+  local match_indices = utils.fuzzy_match(node.relative_path, ui.search_term)
+  if match_indices then
+    vim.api.nvim_command('highlight BroilSearchTerm guifg=#f9e2af')
+    for _, idx in ipairs(match_indices) do
+      vim.api.nvim_buf_add_highlight(ui.buf_id, -1, 'BroilSearchTerm', render_index, #indent + idx - 1, #indent + idx)
+    end
+  end
+
   return rendered_line
+end
+
+function Tree:render_selection()
+  if (Tree.selected_render_index) then
+    vim.api.nvim_buf_clear_namespace(ui.buf_id, ui.selection_ns_id, 0, -1)
+    vim.api.nvim_command('highlight BroilSelection guibg=#45475a')
+    vim.api.nvim_buf_add_highlight(ui.buf_id, ui.selection_ns_id, 'BroilSelection', Tree.selected_render_index, 0, -1)
+
+    -- Set the cursor to the selected line
+    vim.api.nvim_win_set_cursor(ui.win_id, { Tree.selected_render_index + 1, 0 })
+    vim.api.nvim_command('normal! zz')
+  end
 end
 
 --- render array of nodes recursively
 function Tree:render(nodes, depth, current_line_index)
   local rendered_lines = 0
+
+  if not nodes then
+    return 0
+  end
 
   for _, node in ipairs(nodes) do
     local render_index = (current_line_index or 0) + rendered_lines
@@ -137,6 +157,8 @@ function Tree:render(nodes, depth, current_line_index)
       rendered_lines = rendered_lines + self:render(node.children, (depth or 0) + 1, render_index + 1)
     end
   end
+
+  Tree:render_selection()
 
   return rendered_lines
 end
@@ -156,7 +178,7 @@ function Tree:filter(nodes, search_term)
     end
 
     -- Check if the current node or an ancestor matches the path
-    local current_matched = string.match(node.full_path, path)
+    local current_matched = utils.fuzzy_match(node.relative_path, path)
 
     -- Check the children nodes
     for _, child in ipairs(node.children) do
@@ -247,14 +269,9 @@ ui.on_search_input_listener = function()
     buffer = ui.search_buf_id,
     callback = function()
       ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
-
-      if (Tree.selected_render_index == nil) then
-        Tree.selected_render_index = 0
-      else
-        Tree.selected_render_index = Tree.selected_render_index + 1
-      end
       ui.clear()
       local filtered_nodes = Tree:filter(Tree.nodes, ui.search_term)
+      Tree.selected_render_index = nil -- TODO: select the node with the highest matching score
       Tree:render(filtered_nodes, 0, 0)
     end
   })
@@ -263,6 +280,45 @@ end
 ui.help = function()
   print("broil help")
 end
+
+ui.select_next_node = function()
+  local new_index = (Tree.selected_render_index or -1) + 1
+  local lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
+
+  if (new_index > #lines - 2) then
+    Tree.selected_render_index = 0
+  else
+    Tree.selected_render_index = new_index
+  end
+
+  Tree:render_selection()
+end
+
+ui.select_prev_node = function()
+  local lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
+  local new_index = (Tree.selected_render_index or #lines - 1) - 1
+
+  if (new_index < 0) then
+    Tree.selected_render_index = #lines - 2
+  else
+    Tree.selected_render_index = new_index
+  end
+
+  Tree:render_selection()
+end
+
+ui.set_keybinds = function()
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'n', '<C-j>', '<cmd>lua require("broil.ui").select_next_node()<CR>',
+    { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'i', '<C-j>', '<cmd>lua require("broil.ui").select_next_node()<CR>',
+    { noremap = true, silent = true })
+
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'n', '<C-k>', '<cmd>lua require("broil.ui").select_prev_node()<CR>',
+    { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(ui.search_buf_id, 'i', '<C-k>', '<cmd>lua require("broil.ui").select_prev_node()<CR>',
+    { noremap = true, silent = true })
+end
+
 
 --- open a floating window with a tree view of the current file's directory
 ui.open_float = function()
@@ -284,11 +340,13 @@ ui.open_float = function()
   ui.search_buf_id = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width) -- Set text width to the width of the window
   ui.search_win_id = vim.api.nvim_open_win(ui.search_buf_id, true, ui.search_win) -- Open a floating focused search window
+  vim.api.nvim_command('startinsert')
 
 
   -- 3. attach event listeners
   ui.on_edits_made_listener()
   ui.on_search_input_listener()
+  ui.set_keybinds()
 end
 
 return ui
