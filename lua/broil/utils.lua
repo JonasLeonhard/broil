@@ -17,5 +17,4 @@ utils.fuzzy_match = function(str, pattern)
   return nil
 end
 
-
 return utils

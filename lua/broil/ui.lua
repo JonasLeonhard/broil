@@ -1,9 +1,9 @@
 local ui = {
+  -- #State
+  mode = "tree", -- tree or buffer
+  -- #Content
   buf_id = nil,
   win_id = nil,
-  search_win_id = nil,
-  search = "todo_current_search_term",
-  mode = "tree", -- tree or buffer
   float_win = {
     relative = "editor",
     width = vim.o.columns,                     -- 100% width
@@ -24,6 +24,8 @@ local ui = {
     },
     zindex = 50,
   },
+  -- #Search
+  search_win_id = nil,
   search_win = {
     relative = "editor",
     width = vim.o.columns, -- 100% width
@@ -40,11 +42,6 @@ local config = require('broil.config')
 local Tree = require('broil.tree')
 local fs = require('broil.fs')
 
-ui.clear = function()
-  vim.api.nvim_buf_set_lines(ui.buf_id, 0, -1, false, {})
-end
-
-
 --- scan the file system at dir and create a tree view for the buffer
 --- @param dir string root directory to create nodes from
 ui.create_tree_window = function(dir)
@@ -53,11 +50,8 @@ ui.create_tree_window = function(dir)
   vim.b[ui.buf_id].modifiable = true
   vim.wo.signcolumn = 'yes'
 
-  -- 2. Create a Tree and render it to the buffer
-  ui.clear()
-  Tree:build(dir, config.special_paths)
-  Tree:filter(ui.search_term)
-  Tree:render(ui.buf_id)
+  -- 2. set the tree dir to the root path.
+  Tree:build_and_render(dir, ui.search_term, config.special_paths, ui.buf_id)
 
   -- 3. create a new tree buffer window
   if (ui.win_id ~= nil) then
@@ -85,9 +79,7 @@ ui.on_search_input_listener = function()
     buffer = ui.search_buf_id,
     callback = function()
       ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
-      ui.clear()
-      Tree:filter(ui.search_term)
-      Tree:render(ui.buf_id)
+      Tree:build_and_render(Tree.root_path, ui.search_term, config.special_paths, ui.buf_id)
     end
   })
 end
@@ -158,7 +150,6 @@ end
 --- Open the parent dir of the currently opened tree_view -> vim.fn.fnamemodify(Tree.root_path, ":h")
 ui.open_parent_dir = function()
   local parent_dir = vim.fn.fnamemodify(Tree.root_path, ":h")
-  print("parnet_dir", Tree.root_path, parent_dir)
   if (parent_dir) then
     ui.create_tree_window(parent_dir)
   end
