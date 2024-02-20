@@ -12,7 +12,7 @@ local Tree = {
   search_pattern = '',  -- used to filter_nodes
   search_term_ns_id = vim.api.nvim_create_namespace('BroilSearchTerm'),
   filtered_nodes = nil, -- table|nil
-  loading = false,
+  callcounter = 0,
 
   -- fzf
   fzf_slab = nil,
@@ -56,11 +56,6 @@ function Tree:render_nodes(buf_id, nodes, depth, current_line_index)
   end
   local rendered_lines = 0
 
-  -- clear last render highlights
-  vim.schedule(function()
-    vim.api.nvim_buf_clear_namespace(buf_id, self.search_term_ns_id, 0, -1)
-  end)
-
   for _, node in ipairs(render_nodes) do
     local render_index = (current_line_index or 0) + rendered_lines
 
@@ -92,10 +87,19 @@ function Tree:render_node(buf_id, node, render_index)
     rendered_line = rendered_line .. "/"
   end
 
-  -- highlighting
+  if (self.fzf_pattern_obj and self.fzf_slab) then
+    node.fzf_score = fzf.get_score(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
+    node.fzf_pos = fzf.get_pos(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
+
+    if (not self.fzf_highest_score or node.fzf_score > self.fzf_highest_score) then
+      self.fzf_highest_score = node.fzf_score
+      self.selected_render_index = node.render_index
+    end
+  end
+
+  -- render line & highlight
   vim.schedule(function()
     vim.api.nvim_buf_set_lines(buf_id, render_index, render_index, false, { rendered_line })
-
 
     -- apply line highlights and icons as soon as the line rendered
     if rendered_line:match('/$') then
@@ -133,16 +137,6 @@ function Tree:render_node(buf_id, node, render_index)
     end
   end)
 
-
-  if (self.fzf_pattern_obj and self.fzf_slab) then
-    node.fzf_score = fzf.get_score(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
-    node.fzf_pos = fzf.get_pos(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
-
-    if (not self.fzf_highest_score or node.fzf_score > self.fzf_highest_score) then
-      self.fzf_highest_score = node.fzf_score
-      self.selected_render_index = node.render_index
-    end
-  end
   return rendered_line
 end
 
@@ -191,11 +185,8 @@ end
 --- @param buf_id number buffer_id to render the tree into
 --- @param win_id number win_id to render the tree into
 function Tree:build_and_render(dir, search_pattern, special_paths, buf_id, win_id)
-  if (self.loading) then
-    return
-  end
-
-  self.loading = true
+  local current_callcounter = self.callcounter + 1
+  self.callcounter = self.callcounter + 1
   self.root_path = dir
   self.search_pattern = search_pattern
 
@@ -204,7 +195,9 @@ function Tree:build_and_render(dir, search_pattern, special_paths, buf_id, win_i
   self.fzf_pattern_obj = fzf.parse_pattern(self.search_pattern, 0, true)
   self.fzf_highest_score = nil
 
-  vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, {}) -- clear screen
+  -- clear
+  vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, {})                    -- clear screen
+  vim.api.nvim_buf_clear_namespace(buf_id, self.search_term_ns_id, 0, -1) -- last render highlights
 
   local path_to_node_map = {}
   local nodes = {} -- build in add_nodes_from_path
@@ -283,10 +276,13 @@ function Tree:build_and_render(dir, search_pattern, special_paths, buf_id, win_i
     search_pattern = self.search_pattern,
     on_exit = function(files)
       async.run(function()
+        -- maybe there where other async calls in the meantime. Do nothing in that case.
+        if (current_callcounter ~= self.callcounter) then
+          return
+        end
         build_nodes(files)
         self:render_nodes(buf_id, self.nodes)
         self:render_selection(buf_id, win_id)
-        self.loading = false
       end)
     end,
   })
