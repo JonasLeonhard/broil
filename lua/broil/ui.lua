@@ -191,6 +191,8 @@ ui.close_float = function()
     vim.api.nvim_win_close(ui.search_win_id, true)
     ui.search_win_id = nil
   end
+
+  Tree:destroy()
 end
 
 ui.set_search = function(search_term)

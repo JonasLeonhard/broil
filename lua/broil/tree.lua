@@ -1,7 +1,7 @@
 local dev_icons = require('nvim-web-devicons')
-local utils = require('broil.utils')
 local async = require('plenary.async')
 local scan = require('plenary.scandir')
+local fzf = require('fzf_lib')
 
 local Tree = {
   buf_id = nil,
@@ -9,10 +9,14 @@ local Tree = {
   selection_ns_id = vim.api.nvim_create_namespace('BroilSelection'),
   root_path = nil,
   nodes = {},
-  search_term = '',     -- used to filter_nodes
+  search_pattern = '',  -- used to filter_nodes
   search_term_ns_id = vim.api.nvim_create_namespace('BroilSearchTerm'),
   filtered_nodes = nil, -- table|nil
   loading = false,
+
+  -- fzf
+  fzf_slab = nil,
+  fzf_pattern_obj = nil,
 }
 
 function Tree:Node(node_option)
@@ -24,7 +28,9 @@ function Tree:Node(node_option)
     index = node_option.index,
     render_index = nil,                        -- set before rendering the node
     depth = node_option.depth,
-    children = node_option.children or {}
+    children = node_option.children or {},
+    fzf_score = nil,
+    fzf_pos = nil
   }
 
   if (node_option.parent_index) then
@@ -75,7 +81,7 @@ function Tree:render_node(buf_id, node, render_index)
   node.render_index = render_index;
 
   local render_path = node.path
-  if (self.search_term ~= '') then
+  if (self.search_pattern ~= '') then
     render_path = node.relative_path
   end
 
@@ -117,11 +123,14 @@ function Tree:render_node(buf_id, node, render_index)
       end
     end
 
-    -- search filter highlighting
-    local match_indices = utils.fuzzy_match(node.relative_path, self.search_term)
-    if match_indices then
+    if (self.fzf_pattern_obj and self.fzf_slab) then
+      node.fzf_score = fzf.get_score(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
+      node.fzf_pos = fzf.get_pos(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
+    end
+
+    if node.fzf_pos then
       vim.api.nvim_command('highlight BroilSearchTerm guifg=#f9e2af')
-      for _, idx in ipairs(match_indices) do
+      for _, idx in ipairs(node.fzf_pos) do
         vim.api.nvim_buf_add_highlight(buf_id, self.search_term_ns_id, 'BroilSearchTerm', render_index, #indent + idx - 1,
           #indent + idx)
       end
@@ -174,6 +183,11 @@ function Tree:build_and_render(dir, search_pattern, special_paths, buf_id)
   self.loading = true
   self.root_path = dir
   self.selected_render_index = nil
+  self.search_pattern = search_pattern
+
+  -- init fuzzy finder
+  self.fzf_slab = fzf.allocate_slab()
+  self.fzf_pattern_obj = fzf.parse_pattern(self.search_pattern, 0, true)
 
   vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, {}) -- clear screen
 
@@ -244,14 +258,14 @@ function Tree:build_and_render(dir, search_pattern, special_paths, buf_id)
 
   local search_depth = 2
 
-  if (search_pattern ~= '') then
+  if (self.search_pattern ~= '') then
     search_depth = 15
   end
   scan.scan_dir_async(dir, {
     hidden = true,
     add_dirs = true,
     depth = search_depth,
-    search_pattern = search_pattern,
+    search_pattern = self.search_pattern,
     on_exit = function(files)
       async.run(function()
         build_nodes(files)
@@ -260,6 +274,17 @@ function Tree:build_and_render(dir, search_pattern, special_paths, buf_id)
       end)
     end,
   })
+end
+
+--- Free fzf related memory.
+function Tree:destroy()
+  if (self.fzf_pattern_obj) then
+    fzf.free_pattern(self.fzf_pattern_obj)
+  end
+
+  if (self.fzf_slab) then
+    fzf.free_slab(self.fzf_slab)
+  end
 end
 
 return Tree
