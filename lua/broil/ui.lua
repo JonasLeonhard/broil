@@ -50,8 +50,9 @@ ui.create_tree_window = function(dir)
   vim.b[ui.buf_id].modifiable = true
   vim.wo.signcolumn = 'yes'
 
-  -- 2. set the tree dir to the root path.
-  Tree:build_and_render(dir, ui.search_term, config.special_paths, ui.buf_id)
+  -- -- 2. set the tree dir to the root path. TODO: search_input_listener called initially
+  Tree.root_path = dir -- refactor
+  -- Tree:build_and_render(dir, ui.search_term, config.special_paths, ui.buf_id, ui.win_id)
 
   -- 3. create a new tree buffer window
   if (ui.win_id ~= nil) then
@@ -79,7 +80,7 @@ ui.on_search_input_listener = function()
     buffer = ui.search_buf_id,
     callback = function()
       ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
-      Tree:build_and_render(Tree.root_path, ui.search_term, config.special_paths, ui.buf_id)
+      Tree:build_and_render(Tree.root_path, ui.search_term, config.special_paths, ui.buf_id, ui.win_id)
     end
   })
 end

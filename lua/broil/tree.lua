@@ -17,6 +17,7 @@ local Tree = {
   -- fzf
   fzf_slab = nil,
   fzf_pattern_obj = nil,
+  fzf_highest_score = nil
 }
 
 function Tree:Node(node_option)
@@ -123,11 +124,6 @@ function Tree:render_node(buf_id, node, render_index)
       end
     end
 
-    if (self.fzf_pattern_obj and self.fzf_slab) then
-      node.fzf_score = fzf.get_score(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
-      node.fzf_pos = fzf.get_pos(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
-    end
-
     if node.fzf_pos then
       vim.api.nvim_command('highlight BroilSearchTerm guifg=#f9e2af')
       for _, idx in ipairs(node.fzf_pos) do
@@ -136,18 +132,36 @@ function Tree:render_node(buf_id, node, render_index)
       end
     end
   end)
+
+
+  if (self.fzf_pattern_obj and self.fzf_slab) then
+    node.fzf_score = fzf.get_score(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
+    node.fzf_pos = fzf.get_pos(node.relative_path, self.fzf_pattern_obj, self.fzf_slab)
+
+    if (not self.fzf_highest_score or node.fzf_score > self.fzf_highest_score) then
+      self.fzf_highest_score = node.fzf_score
+      self.selected_render_index = node.render_index
+    end
+  end
   return rendered_line
 end
 
 function Tree:render_selection(buf_id, win_id)
   if (self.selected_render_index) then
-    vim.api.nvim_buf_clear_namespace(buf_id, self.selection_ns_id, 0, -1)
-    vim.api.nvim_command('highlight BroilSelection guibg=#45475a')
-    vim.api.nvim_buf_add_highlight(buf_id, self.selection_ns_id, 'BroilSelection', self.selected_render_index, 0, -1)
+    vim.schedule(function()
+      -- reset the render index if out of bounds
+      local lines = vim.api.nvim_buf_get_lines(buf_id, 0, -1, false)
+      if (self.selected_render_index > #lines - 1) then
+        self.selected_render_index = #lines - 1
+      end
 
-    -- Set the cursor to the selected line
-    vim.api.nvim_win_set_cursor(win_id, { self.selected_render_index + 1, 0 })
-    vim.api.nvim_command('normal! zz')
+      vim.api.nvim_buf_clear_namespace(buf_id, self.selection_ns_id, 0, -1)
+      vim.api.nvim_command('highlight BroilSelection guibg=#45475a')
+      vim.api.nvim_buf_add_highlight(buf_id, self.selection_ns_id, 'BroilSelection', self.selected_render_index, 0, -1)
+
+      -- Set the cursor to the selected line and scroll to it
+      vim.api.nvim_win_set_cursor(win_id, { self.selected_render_index + 1, 0 })
+    end)
   end
 end
 
@@ -175,19 +189,20 @@ end
 --- @param search_pattern string seach pattern regex to filter nodes by
 --- @param special_paths table table of paths that should be hidden, or not entered for child nodes. Eg { ['node_modules']: 'no-enter', ['.git']: 'no-enter', ['.DS_Store'] = 'hide']}
 --- @param buf_id number buffer_id to render the tree into
-function Tree:build_and_render(dir, search_pattern, special_paths, buf_id)
+--- @param win_id number win_id to render the tree into
+function Tree:build_and_render(dir, search_pattern, special_paths, buf_id, win_id)
   if (self.loading) then
     return
   end
 
   self.loading = true
   self.root_path = dir
-  self.selected_render_index = nil
   self.search_pattern = search_pattern
 
   -- init fuzzy finder
   self.fzf_slab = fzf.allocate_slab()
   self.fzf_pattern_obj = fzf.parse_pattern(self.search_pattern, 0, true)
+  self.fzf_highest_score = nil
 
   vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, {}) -- clear screen
 
@@ -270,6 +285,7 @@ function Tree:build_and_render(dir, search_pattern, special_paths, buf_id)
       async.run(function()
         build_nodes(files)
         self:render_nodes(buf_id, self.nodes)
+        self:render_selection(buf_id, win_id)
         self.loading = false
       end)
     end,
