@@ -41,6 +41,7 @@ local ui = {
 local config = require('broil.config')
 local Tree = require('broil.tree')
 local fs = require('broil.fs')
+local utils = require('broil.utils')
 
 --- scan the file system at dir and create a tree view for the buffer
 --- @param dir string root directory to create nodes from
@@ -80,7 +81,10 @@ ui.on_search_input_listener = function()
     buffer = ui.search_buf_id,
     callback = function()
       ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
-      Tree:build_and_render(Tree.root_path, ui.search_term, config.special_paths, ui.buf_id, ui.win_id)
+
+      utils.debounce(function()
+        Tree:build_and_render(Tree.root_path, ui.search_term, config.special_paths, ui.buf_id, ui.win_id)
+      end, 100)()
     end
   })
 end
