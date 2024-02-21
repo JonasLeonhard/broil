@@ -1,6 +1,6 @@
 local dev_icons = require('nvim-web-devicons')
 local async = require('plenary.async')
-local scan = require('plenary.scandir')
+local Job = require('plenary.job')
 local fzf = require('fzf_lib')
 
 local Tree = {
@@ -12,9 +12,9 @@ local Tree = {
   search_pattern = '',  -- used to filter_nodes
   search_term_ns_id = vim.api.nvim_create_namespace('BroilSearchTerm'),
   filtered_nodes = nil, -- table|nil
-  callcounter = 0,
 
   -- fzf
+  job = nil,
   fzf_slab = nil,
   fzf_pattern_obj = nil,
   fzf_highest_score = nil
@@ -184,9 +184,7 @@ end
 --- @param special_paths table table of paths that should be hidden, or not entered for child nodes. Eg { ['node_modules']: 'no-enter', ['.git']: 'no-enter', ['.DS_Store'] = 'hide']}
 --- @param buf_id number buffer_id to render the tree into
 --- @param win_id number win_id to render the tree into
-function Tree:build_and_render(dir, search_pattern, special_paths, buf_id, win_id)
-  local current_callcounter = self.callcounter + 1
-  self.callcounter = self.callcounter + 1
+function Tree:build_and_render(dir, search_pattern, special_paths, buf_id, win_id, max_lines)
   self.root_path = dir
   self.search_pattern = search_pattern
 
@@ -195,19 +193,17 @@ function Tree:build_and_render(dir, search_pattern, special_paths, buf_id, win_i
   self.fzf_pattern_obj = fzf.parse_pattern(self.search_pattern, 0, true)
   self.fzf_highest_score = nil
 
-  -- clear
-  vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, {})                    -- clear screen
-  vim.api.nvim_buf_clear_namespace(buf_id, self.search_term_ns_id, 0, -1) -- last render highlights
-
   local path_to_node_map = {}
   local nodes = {} -- build in add_nodes_from_path
 
   --- split the relative path of the full_path into parts and add a node for each part if one doesnt exist
-  --- eg. for '/Users/someuser/some/path' opened in self.root_path '/Users/someuser' it will add nodes for { some, some/path }
-  --- @param full_path string eg: /Users/someuser/some/path
+  --- eg. for '/Users/someuser/some/path/' opened in self.root_path '/Users/someuser' it will add nodes for { some, some/path }
+  --- @param full_path string eg: /Users/someuser/some/path/
   local add_nodes_from_path = function(full_path)
-    local relative_path = string.gsub(full_path, self.root_path .. "/", "")
-    local relative_path_parts = vim.split(relative_path, "/")
+    local relative_path_parts = vim.split(full_path, "/")
+    if (full_path:match('/$')) then
+      table.remove(relative_path_parts, #relative_path_parts)
+    end
 
     local build_relative_path = ''
     -- iterate the relative paths part
@@ -264,28 +260,33 @@ function Tree:build_and_render(dir, search_pattern, special_paths, buf_id, win_i
     self.nodes = nodes
   end
 
-  local search_depth = 2
+  async.run(function()
+    if (self.job and not self.job.is_shutdown) then
+      self.job:shutdown()
+    end
 
-  if (self.search_pattern ~= '') then
-    search_depth = 15
-  end
-  scan.scan_dir_async(dir, {
-    hidden = true,
-    add_dirs = true,
-    depth = search_depth,
-    search_pattern = self.search_pattern,
-    on_exit = function(files)
-      async.run(function()
-        -- maybe there where other async calls in the meantime. Do nothing in that case.
-        if (current_callcounter ~= self.callcounter) then
+    local fd_args = { self.search_pattern, '-c', 'never', '--max-results', max_lines }
+    self.job = Job:new({
+      command = 'fd',
+      args = fd_args,
+      cwd = dir,
+      on_exit = function(j, return_val)
+        if (return_val ~= 0) then
           return
         end
-        build_nodes(files)
-        self:render_nodes(buf_id, self.nodes)
+        -- clear draw
+        vim.schedule(function()
+          vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, {})                    -- clear screen
+          vim.api.nvim_buf_clear_namespace(buf_id, self.search_term_ns_id, 0, -1) -- last render highlights
+        end)
+
+        build_nodes(j:result())
+        self:render_nodes(buf_id, nodes)
         self:render_selection(buf_id, win_id)
-      end)
-    end,
-  })
+      end,
+    })
+    self.job:sync()
+  end)
 end
 
 --- Free fzf related memory.

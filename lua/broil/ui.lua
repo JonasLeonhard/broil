@@ -83,7 +83,8 @@ ui.on_search_input_listener = function()
       ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
 
       utils.debounce(function()
-        Tree:build_and_render(Tree.root_path, ui.search_term, config.special_paths, ui.buf_id, ui.win_id)
+        Tree:build_and_render(Tree.root_path, ui.search_term, config.special_paths, ui.buf_id, ui.win_id,
+          ui.float_win.height)
       end, 100)()
     end
   })
