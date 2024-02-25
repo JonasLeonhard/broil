@@ -38,8 +38,7 @@ local ui = {
   search_term = "", -- current search filter
 }
 
-local config = require('broil.config')
-local Tree = require('broil.tree')
+local Tree_Builder = require('broil.tree_builder')
 local fs = require('broil.fs')
 local utils = require('broil.utils')
 
@@ -52,14 +51,12 @@ ui.create_tree_window = function(dir)
   vim.wo.signcolumn = 'yes'
 
   -- -- 2. set the tree dir to the root path. TODO: search_input_listener called initially
-  Tree.root_path = dir -- refactor
-  -- Tree:build_and_render(dir, ui.search_term, config.special_paths, ui.buf_id, ui.win_id)
 
   -- 3. create a new tree buffer window
   if (ui.win_id ~= nil) then
     vim.api.nvim_win_close(ui.win_id, true)
   end
-  ui.float_win.title = " " .. Tree.root_path .. "| [" .. ui.mode .. "]"
+  ui.float_win.title = " " .. 'TODO: root path?' .. "| [" .. ui.mode .. "]"
   ui.win_id = vim.api.nvim_open_win(ui.buf_id, false, ui.float_win)
 end
 
@@ -83,8 +80,25 @@ ui.on_search_input_listener = function()
       ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
 
       utils.debounce(function()
-        Tree:build_and_render(Tree.root_path, ui.search_term, config.special_paths, ui.buf_id, ui.win_id,
-          ui.float_win.height)
+        -- TODO - build tree from search
+        local open_dir = fs.get_dir_of_current_window_or_nvim_cwd()
+        local builder = Tree_Builder:new(open_dir, {
+          pattern = ui.search_term,
+          optimal_lines = ui.float_win.height
+        })
+        local tree = builder:build_tree()
+
+        -- TODO: RENDER
+        vim.api.nvim_buf_set_lines(ui.buf_id, 0, -1, false, {})
+        for _, bline in ipairs(tree) do
+          vim.api.nvim_buf_set_lines(ui.buf_id, -1, -1, false,
+            { bline.relative_path .. ' score: ' .. bline.score .. ' / ' .. bline.fzf_score })
+        end
+
+        builder:destroy()
+        if (ui.search_term == 'assets') then
+          print("tree_builder build_tree: ", vim.inspect(builder), vim.inspect(tree))
+        end
       end, 100)()
     end
   })
@@ -98,78 +112,76 @@ end
 
 --- Selects the node that is rendered at the next render_index
 ui.select_next_node = function()
-  local new_index = (Tree.selected_render_index or -1) + 1
-  local lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
+  -- TODO: next node
+  -- local new_index = (Tree.selected_render_index or -1) + 1
+  -- local lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
 
   if (new_index > #lines - 2) then
-    Tree.selected_render_index = 0
+    -- Tree.selected_render_index = 0
   else
-    Tree.selected_render_index = new_index
+    -- Tree.selected_render_index = new_index
   end
 
-  Tree:render_selection(ui.buf_id, ui.win_id)
+  -- Tree:render_selection(ui.buf_id, ui.win_id)
 end
 
 
 --- Selects the node that is rendered at the previous render_index
 ui.select_prev_node = function()
-  local lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
-  local new_index = (Tree.selected_render_index or #lines - 1) - 1
-
-  if (new_index < 0) then
-    local last_line_index = #lines - 2
-    if (last_line_index < 0) then
-      return
-    end
-    Tree.selected_render_index = last_line_index
-  else
-    Tree.selected_render_index = new_index
-  end
-
-  Tree:render_selection(ui.buf_id, ui.win_id)
+  -- local lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
+  -- local new_index = (Tree.selected_render_index or #lines - 1) - 1
+  --
+  -- if (new_index < 0) then
+  --   local last_line_index = #lines - 2
+  --   if (last_line_index < 0) then
+  --     return
+  --   end
+  --   Tree.selected_render_index = last_line_index
+  -- else
+  --   Tree.selected_render_index = new_index
+  -- end
+  --
+  -- Tree:render_selection(ui.buf_id, ui.win_id)
 end
 
 --- Opens the currently selected tree node (Tree.selected_render_index)
 --- It enters the node if its a dir,
 --- otherwise it opens the file in a new buffer
 ui.open_selected_node = function()
-  if (Tree.selected_render_index == nil) then
-    return
-  end
-
-  local node = Tree:find_by('render_index', Tree.selected_render_index)
-
-  if (node == nil) then
-    return
-  end
-
-  if (node.type == "directory") then
-    ui.set_search("")
-    ui.create_tree_window(node.full_path)
-  else
-    ui.close_float()
-    vim.api.nvim_command('edit ' .. node.full_path)
-    vim.api.nvim_command('stopinsert')
-  end
+  -- if (Tree.selected_render_index == nil) then
+  --   return
+  -- end
+  --
+  -- local node = Tree:find_by('render_index', Tree.selected_render_index)
+  --
+  -- if (node == nil) then
+  --   return
+  -- end
+  --
+  -- if (node.type == "directory") then
+  --   ui.set_search("")
+  --   ui.create_tree_window(node.full_path)
+  -- else
+  --   ui.close_float()
+  --   vim.api.nvim_command('edit ' .. node.full_path)
+  --   vim.api.nvim_command('stopinsert')
+  -- end
 end
 
 --- Open the parent dir of the currently opened tree_view -> vim.fn.fnamemodify(Tree.root_path, ":h")
 ui.open_parent_dir = function()
-  local parent_dir = vim.fn.fnamemodify(Tree.root_path, ":h")
-  if (parent_dir) then
-    ui.create_tree_window(parent_dir)
-  end
+  -- local parent_dir = vim.fn.fnamemodify(Tree.root_path, ":h")
+  -- if (parent_dir) then
+  --   ui.create_tree_window(parent_dir)
+  -- end
 end
 
 --- open a floating window with a tree view of the current file's directory
 ui.open_float = function()
-  -- create a tree_window and render the tree to it
-  local open_dir = fs.get_dir_of_current_window_or_nvim_cwd()
-  ui.create_tree_window(open_dir)
+  ui.create_tree_window()
 
   -- 3. create a search prompt at the bottom
   ui.create_search_window()
-
 
   -- 4. attach event listeners
   ui.on_edits_made_listener()
@@ -198,7 +210,7 @@ ui.close_float = function()
     ui.search_win_id = nil
   end
 
-  Tree:destroy()
+  -- Tree:destroy()
 end
 
 ui.set_search = function(search_term)

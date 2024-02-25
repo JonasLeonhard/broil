@@ -28,7 +28,12 @@ local config = {
     ["tmp"] = "no-enter",
     [".next"] = "no-enter",
     [".DS_Store"] = "hide",
-  }
+  },
+
+  -- runtime configs
+  fzf_case_mode = 0, -- case_mode: number with 0 = smart_case, 1 = ignore_case, 2 = respect_case
+  fzf_fuzzy_match = true,
+  show_hidden = false,
 }
 
 --- @param opts table|nil configuration See |broil.config|.
