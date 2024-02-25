@@ -229,11 +229,11 @@ end
 
 --- @param bline_ids broil.BId[]
 function Tree_Builder:as_tree(bline_ids)
-  local tree_lines = {}
+  local tree_lines = {} -- tree_lines with only matching nodes
   for _, bline_id in ipairs(bline_ids) do
     local bline = self.blines[bline_id]
-    -- we need to count the children, so we load them
-    if (bline.type == 'directory' and #bline.children == 0) then
+    -- there might be dirs we havent entered yet. Since we need to count those dirs, we load them
+    if (bline:can_enter() and #bline.children == 0) then
       self:load_children(bline.id)
     end
 
