@@ -6,7 +6,7 @@ local Tree_Builder = {}
 Tree_Builder.__index = Tree_Builder
 
 --- @param path string
---- @param options broil.TreeOptions
+--- @param options broil.TreeBuilderOptions
 function Tree_Builder:new(path, options)
   local tree_builder = {}
   setmetatable(tree_builder, Tree_Builder)
@@ -28,7 +28,7 @@ function Tree_Builder:new(path, options)
     name = vim.fn.fnamemodify(path, ':t') or '', -- tail of tree path,
     children = {},
     file_type = 'directory',
-    has_match = false,
+    has_match = true, -- always show the root node
     score = 0,
     fzf_score = 0,
     fzf_pos = {},
@@ -229,7 +229,8 @@ end
 
 --- @param bline_ids broil.BId[]
 function Tree_Builder:as_tree(bline_ids)
-  local tree_lines = {} -- tree_lines with only matching nodes
+  -- build tree_lines with only matching nodes from ids
+  local tree_lines = {}
   for _, bline_id in ipairs(bline_ids) do
     local bline = self.blines[bline_id]
     -- there might be dirs we havent entered yet. Since we need to count those dirs, we load them
@@ -242,7 +243,27 @@ function Tree_Builder:as_tree(bline_ids)
       table.insert(tree_lines, bline)
     end
   end
-  return tree_lines
+
+  -- sorting alphabetical! TODO: better sorting
+  table.sort(tree_lines, function(a, b)
+    return a.path:lower() < b.path:lower() -- case insensitive alphabetical
+  end)
+
+  -- get the best scoring node to select later
+  local highest_score_index = 1
+
+  if (self.pattern ~= '') then -- its always the root if you searched for nothing
+    for i, bline in ipairs(tree_lines) do
+      if (bline.score > tree_lines[highest_score_index].score) then
+        highest_score_index = i
+      end
+    end
+  end
+
+  return {
+    lines = tree_lines,
+    highest_score_index = highest_score_index
+  }
 end
 
 function Tree_Builder:build_tree()
@@ -251,9 +272,10 @@ function Tree_Builder:build_tree()
   if (not root_node) then
     return {}
   end
-  self:load_children(root_node.id) -- load the root nodes children
-  local bline_ids = self:gather_lines()
-  return self:as_tree(bline_ids)
+
+  self:load_children(root_node.id)      -- load the root nodes children
+  local bline_ids = self:gather_lines() -- unsorted bids
+  return self:as_tree(bline_ids)        -- structure with sorted and clustered blines
 end
 
 function Tree_Builder:destroy()

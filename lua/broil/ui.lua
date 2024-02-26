@@ -35,10 +35,12 @@ local ui = {
     style = "minimal",
     zindex = 51,
   },
-  search_term = "", -- current search filter
+  search_term = "", -- current search filter,
+  tree = nil        -- current tree
 }
 
 local Tree_Builder = require('broil.tree_builder')
+local Tree = require('broil.tree')
 local fs = require('broil.fs')
 local utils = require('broil.utils')
 
@@ -86,18 +88,30 @@ ui.on_search_input_listener = function()
           pattern = ui.search_term,
           optimal_lines = ui.float_win.height
         })
-        local tree = builder:build_tree()
+        local tree_build = builder:build_tree()
 
-        -- TODO: RENDER
+        print("tree_build: ", vim.inspect(tree_build))
+        ui.tree = Tree:new({
+          buf_id = ui.buf_id,
+          win_id = ui.win_id,
+          lines = tree_build.lines,
+          selected_index = tree_build.highest_score_index,
+        })
+
+        -- TODO: tree:render()
         vim.api.nvim_buf_set_lines(ui.buf_id, 0, -1, false, {})
-        for _, bline in ipairs(tree) do
+        for _, bline in ipairs(ui.tree.lines) do
           vim.api.nvim_buf_set_lines(ui.buf_id, -1, -1, false,
-            { bline.relative_path .. ' score: ' .. bline.score .. ' / ' .. bline.fzf_score })
+            { bline.path ..
+            ' score: ' ..
+            bline.score .. ' / ' .. bline.fzf_score .. ' highest_score_index: ' .. tree_build.highest_score_index })
         end
+
+        ui.tree:render_selection()
 
         builder:destroy()
         if (ui.search_term == 'assets') then
-          print("tree_builder build_tree: ", vim.inspect(builder), vim.inspect(tree))
+          print("tree_builder build_tree: ", vim.inspect(builder), vim.inspect(ui.tree))
         end
       end, 100)()
     end
@@ -110,38 +124,19 @@ ui.help = function()
   print("broil help")
 end
 
---- Selects the node that is rendered at the next render_index
 ui.select_next_node = function()
-  -- TODO: next node
-  -- local new_index = (Tree.selected_render_index or -1) + 1
-  -- local lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
-
-  if (new_index > #lines - 2) then
-    -- Tree.selected_render_index = 0
-  else
-    -- Tree.selected_render_index = new_index
+  if (not ui.tree) then
+    return
   end
-
-  -- Tree:render_selection(ui.buf_id, ui.win_id)
+  ui.tree:select_next()
 end
 
 
---- Selects the node that is rendered at the previous render_index
 ui.select_prev_node = function()
-  -- local lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
-  -- local new_index = (Tree.selected_render_index or #lines - 1) - 1
-  --
-  -- if (new_index < 0) then
-  --   local last_line_index = #lines - 2
-  --   if (last_line_index < 0) then
-  --     return
-  --   end
-  --   Tree.selected_render_index = last_line_index
-  -- else
-  --   Tree.selected_render_index = new_index
-  -- end
-  --
-  -- Tree:render_selection(ui.buf_id, ui.win_id)
+  if (not ui.tree) then
+    return
+  end
+  ui.tree:select_prev()
 end
 
 --- Opens the currently selected tree node (Tree.selected_render_index)

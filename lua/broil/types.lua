@@ -1,4 +1,4 @@
---- @class broil.TreeOptions
+--- @class broil.TreeBuilderOptions
 --- @field pattern string -- search pattern to filter /order the tree by
 --- @field optimal_lines integer how many lines to build a tree for
 
@@ -22,3 +22,9 @@
 --- @field fzf_pos table positions that matched the search term chars, eg: {1, 3, 4}
 --- @field nb_kept_children integer used during the trimming step
 --- @field read_dir function|nil -> @return broil.ReadDir[]
+
+--- @class broil.TreeOptions
+--- @field lines broil.BLine[]
+--- @field selected_index integer
+--- @field buf_id integer
+--- @field win_id integer
