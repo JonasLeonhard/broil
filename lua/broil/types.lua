@@ -1,6 +1,6 @@
 --- @class broil.TreeBuilderOptions
 --- @field pattern string -- search pattern to filter /order the tree by
---- @field optimal_lines integer how many lines to build a tree for
+--- @field optimal_lines integer|nil how many lines to build a tree for. Nil equals a total search
 
 --- @alias broil.BId integer
 

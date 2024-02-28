@@ -102,9 +102,9 @@ ui.on_search_input_listener = function()
         vim.api.nvim_buf_set_lines(ui.buf_id, 0, -1, false, {})
         for _, bline in ipairs(ui.tree.lines) do
           vim.api.nvim_buf_set_lines(ui.buf_id, -1, -1, false,
-            { bline.path ..
-            ' score: ' ..
-            bline.score .. ' / ' .. bline.fzf_score .. ' highest_score_index: ' .. tree_build.highest_score_index })
+            { bline.relative_path ..
+            ' :unlisted: ' ..
+            bline.unlisted .. ' lt: ' .. (bline.line_type or '') .. ' score:' .. bline.score })
         end
 
         ui.tree:render_selection()

@@ -12,7 +12,7 @@ function Tree_Builder:new(path, options)
   setmetatable(tree_builder, Tree_Builder)
 
   tree_builder.path = path
-  tree_builder.optimal_lines = options.optimal_lines
+  tree_builder.optimal_lines = options.optimal_lines -- can be nil for infinite search
   tree_builder.pattern = options.pattern
 
   tree_builder.fzf_slab = fzf.allocate_slab()
@@ -32,8 +32,10 @@ function Tree_Builder:new(path, options)
     score = 0,
     fzf_score = 0,
     fzf_pos = {},
-    nb_kept_children = 0,
-    next_child_idx = 1, -- this is used for building the tree only. It keeps track of the node from wich to continue building the tree after touching the current dir.
+    nb_kept_children = 0, -- todo? amount of kept children
+    next_child_idx = 1,   -- this is used for building the tree only. It keeps track of the node from wich to continue building the tree after touching the current dir.
+    left_branches = {},   -- table<depth, boolean>: depths where the branch has a left branch
+    unlisted = 0,         -- amount of unlisted children. This will be set later
   })
   tree_builder.root_id = bline.id
   table.insert(tree_builder.blines, bline.id, bline)
@@ -43,19 +45,20 @@ end
 
 --- gathers a list of matching bline ids via breadth-first search (BFS) from the root node of the tree, also loads the children traversed dir nodes
 function Tree_Builder:gather_lines()
+  local search_size = self.optimal_lines
+  if (self.optimal_lines and self.pattern ~= '') then
+    -- we increase the search_size temporarily, those lines will be pruned back to the optimal_lines size with only the best scores
+    search_size = self.optimal_lines * 10
+  end
+
+  -- go through all open_dirs and process their blines one by one until you found matching lines equal to the optimal_size
   --- @type broil.BId[]
   local out_lines = { self.root_id }
   local open_dirs = { self.root_id }
   local next_level_dirs = {}
-  local nb_lines_ok = 1
-  local optimal_size = self.optimal_lines
-  if (self.pattern ~= '') then
-    optimal_size = self.optimal_lines * 10
-  end
-
-  -- go through all open_dirs and process their blines one by one until you reached the optimal_size
+  local matching_lines = 1
   while true do
-    if (nb_lines_ok >= optimal_size) then
+    if (self.optimal_lines and matching_lines >= search_size) then
       break
     end
 
@@ -68,7 +71,7 @@ function Tree_Builder:gather_lines()
         local child = self.blines[child_id]
 
         if (child.has_match) then
-          nb_lines_ok = nb_lines_ok + 1
+          matching_lines = matching_lines + 1
         end
 
         -- if its a dir, enter its childs in the next iteration aswell
@@ -85,18 +88,18 @@ function Tree_Builder:gather_lines()
       end
 
       for _, next_level_dir_id in ipairs(next_level_dirs) do
-        -- TODO: if dam.has_event() { to interupt async build task?
+        -- TODO: refactor this into a function? set_has_match_of_all_ancestors_if_matching
         table.insert(open_dirs, next_level_dir_id)
         local has_child_match = self:load_children(next_level_dir_id);
 
+        -- set has_match of all ancestors aswell
         if (has_child_match) then
-          -- we must ensure the ancestors are made Ok
           local id = next_level_dir_id
           while true do
             local bline = self.blines[id];
             if (not bline.has_match) then
               bline.has_match = true
-              nb_lines_ok = nb_lines_ok + 1
+              matching_lines = matching_lines + 1
             end
 
             if (bline.parent_id) then
@@ -118,6 +121,65 @@ function Tree_Builder:gather_lines()
   while root_next_child_id do
     table.insert(out_lines, root_next_child_id)
     root_next_child_id = self:next_child(self.root_id)
+  end
+
+  -- trim_excess: if we increased the search_size temporarily, we prune the lines back to the optimal_lines size keeping only the lines with the best scores
+  if (self.optimal_lines) then
+    local count = 1
+
+    -- increment the parents kept_children counter for each matched line
+    for i = 2, #out_lines do
+      local bline = self.blines[out_lines[i]]
+      if (bline.parent_id and bline.has_match) then
+        count = count + 1
+        self.blines[bline.parent_id].nb_kept_children = self.blines[bline.parent_id].nb_kept_children + 1;
+      end
+    end
+
+    -- build a removal queue from the bottom up the tree.
+    -- the removal queue will remove all nodes that have no kept children.
+    -- That means we move from the bottom to the top of the tree and remove nodes one by one, updating the removal_queue whenever we remove a node and its parent has no children left
+    local remove_queue = {}
+    for i = 2, #out_lines do
+      local bline = self.blines[out_lines[i]]
+      if (bline.has_match and bline.nb_kept_children == 0 and bline.depth > 1) then
+        table.insert(remove_queue, {
+          id = bline.id,
+          score = bline.score
+        })
+      end
+    end
+    -- sort the queue by score, lowerst score first
+    table.sort(remove_queue, function(a, b)
+      return a.score < b.score
+    end)
+
+    while count > self.optimal_lines do
+      local lowest_score_queue_item = table.remove(remove_queue, 1)
+
+      if (not lowest_score_queue_item) then
+        break
+      end
+
+      self.blines[lowest_score_queue_item.id].has_match = false
+      local parent_id = self.blines[lowest_score_queue_item.id].parent_id
+      local parent = self.blines[parent_id]
+      parent.nb_kept_children = parent.nb_kept_children - 1
+      -- walk back the number of visited nodes aswell. This will update the unlisted property
+      parent.next_child_idx = parent.next_child_idx - 1
+
+      if (parent.nb_kept_children == 0) then
+        table.insert(remove_queue, {
+          id = parent_id,
+          score = parent.score
+        })
+        table.sort(remove_queue, function(a, b)
+          return a.score < b.score
+        end)
+      end
+
+      count = count - 1
+    end
   end
 
   return out_lines
@@ -223,7 +285,9 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     score = score,
     fzf_score = fzf_score or 0,
     fzf_pos = fzf_pos or {},
-    nb_kept_children = 0
+    nb_kept_children = 0,
+    left_branches = {},
+    unlisted = 0
   })
 end
 
@@ -237,6 +301,9 @@ function Tree_Builder:as_tree(bline_ids)
     if (bline:can_enter() and #bline.children == 0) then
       self:load_children(bline.id)
     end
+
+    -- set amount of unlisted children
+    bline.unlisted = #bline.children - (bline.next_child_idx - 1)
 
     -- always insert all nodes when searching for nothing, otherwise only if it matches
     if (self.pattern == '' or bline.has_match) then
@@ -257,6 +324,44 @@ function Tree_Builder:as_tree(bline_ids)
       if (bline.score > tree_lines[highest_score_index].score) then
         highest_score_index = i
       end
+    end
+  end
+  -- iterate the tree_lines from bottom to top, skip the root node at index 1
+  -- get the parent line and create a range from the parent to the current_line. start => parent_index + 1, and end => current_index
+  -- set the left_branches of all lines in the range to the depth
+  local last_parent_index = #tree_lines + 2
+  for end_index = #tree_lines, 2, -1 do
+    -- find the parent_index of the line by iterating from the line index upwards until you get the parent
+    local parent_index
+    if (tree_lines[end_index].parent_id) then
+      local index = end_index
+      while true do
+        index = index - 1
+        if (tree_lines[index].id == tree_lines[end_index].parent_id or index == 1) then
+          break
+        end
+      end
+      parent_index = index
+    else
+      parent_index = end_index
+    end
+
+    -- take the last child of a parent with unlisted children, and turn it to a pruning line instead. Unsetting the unlisted of the parent
+    if (parent_index ~= last_parent_index) then
+      local unlisted = tree_lines[parent_index].unlisted
+      if (unlisted > 0 and tree_lines[end_index].nb_kept_children == 0 and highest_score_index ~= end_index) then
+        tree_lines[end_index].line_type = 'pruning'
+        tree_lines[end_index].unlisted = unlisted + 1
+        tree_lines[end_index].name = tostring(unlisted + 1) .. " unlisted"
+        tree_lines[parent_index].unlisted = 0
+      end
+      last_parent_index = parent_index
+    end
+
+    -- set all branches in from this line to the parent as a left branch
+    local parent_depth = tree_lines[parent_index].depth - 1
+    for i = parent_index + 1, end_index do
+      tree_lines[i].left_branches[tostring(parent_depth)] = true
     end
   end
 
