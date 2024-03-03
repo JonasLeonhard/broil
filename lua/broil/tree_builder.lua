@@ -311,9 +311,9 @@ function Tree_Builder:as_tree(bline_ids)
     end
   end
 
-  -- sorting alphabetical! TODO: better sorting
+  -- sorting paths intro clusters
   table.sort(tree_lines, function(a, b)
-    return a.path:lower() < b.path:lower() -- case insensitive alphabetical
+    return (a.path:lower() .. '/') < (b.path:lower() .. '/') -- case insensitive alphabetical
   end)
 
   -- get the best scoring node to select later
@@ -329,15 +329,15 @@ function Tree_Builder:as_tree(bline_ids)
   -- iterate the tree_lines from bottom to top, skip the root node at index 1
   -- get the parent line and create a range from the parent to the current_line. start => parent_index + 1, and end => current_index
   -- set the left_branches of all lines in the range to the depth
-  local last_parent_index = #tree_lines + 2
-  for end_index = #tree_lines, 2, -1 do
+  local last_parent_index = #tree_lines
+  for end_index = #tree_lines, 1, -1 do
     -- find the parent_index of the line by iterating from the line index upwards until you get the parent
     local parent_index
     if (tree_lines[end_index].parent_id) then
       local index = end_index
-      while true do
+      while index > 1 do
         index = index - 1
-        if (tree_lines[index].id == tree_lines[end_index].parent_id or index == 1) then
+        if (tree_lines[index].id == tree_lines[end_index].parent_id) then
           break
         end
       end

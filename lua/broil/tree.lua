@@ -55,7 +55,7 @@ function Tree:render_branch_icons(bline, bline_index)
         rendered_branch = rendered_branch .. "└──"
       end
     else
-      rendered_branch = rendered_branch .. '   '
+      rendered_branch = rendered_branch .. '   ' -- TODO: get file icon
     end
   end
 
