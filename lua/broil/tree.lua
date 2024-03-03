@@ -83,7 +83,7 @@ function Tree:render_selection()
 end
 
 function Tree:has_branch(line_index, depth)
-  if (line_index >= #self.lines) then
+  if (line_index > #self.lines) then
     return false
   end
 
