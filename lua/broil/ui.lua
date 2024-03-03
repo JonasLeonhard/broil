@@ -90,29 +90,17 @@ ui.on_search_input_listener = function()
         })
         local tree_build = builder:build_tree()
 
-        print("tree_build: ", vim.inspect(tree_build))
+        -- print("tree_build: ", vim.inspect(tree_build))
         ui.tree = Tree:new({
+          pattern = ui.search_term,
           buf_id = ui.buf_id,
           win_id = ui.win_id,
           lines = tree_build.lines,
           selected_index = tree_build.highest_score_index,
         })
-
-        -- TODO: tree:render()
-        vim.api.nvim_buf_set_lines(ui.buf_id, 0, -1, false, {})
-        for _, bline in ipairs(ui.tree.lines) do
-          vim.api.nvim_buf_set_lines(ui.buf_id, -1, -1, false,
-            { bline.relative_path ..
-            ' :unlisted: ' ..
-            bline.unlisted .. ' lt: ' .. (bline.line_type or '') .. ' score:' .. bline.score })
-        end
-
+        ui.tree:render()
         ui.tree:render_selection()
-
         builder:destroy()
-        if (ui.search_term == 'assets') then
-          print("tree_builder build_tree: ", vim.inspect(builder), vim.inspect(ui.tree))
-        end
       end, 100)()
     end
   })

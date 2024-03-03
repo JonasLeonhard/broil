@@ -24,6 +24,7 @@
 --- @field read_dir function|nil -> @return broil.ReadDir[]
 
 --- @class broil.TreeOptions
+--- @field pattern string
 --- @field lines broil.BLine[]
 --- @field selected_index integer
 --- @field buf_id integer

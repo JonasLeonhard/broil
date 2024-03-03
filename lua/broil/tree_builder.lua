@@ -359,9 +359,11 @@ function Tree_Builder:as_tree(bline_ids)
     end
 
     -- set all branches in from this line to the parent as a left branch
-    local parent_depth = tree_lines[parent_index].depth - 1
+    local parent_depth = tree_lines[parent_index].depth
     for i = parent_index + 1, end_index do
-      tree_lines[i].left_branches[tostring(parent_depth)] = true
+      if tree_lines[i].parent_id == tree_lines[parent_index].id then -- check if this is an actual parent...
+        tree_lines[i].left_branches[tostring(parent_depth)] = true
+      end
     end
   end
 
