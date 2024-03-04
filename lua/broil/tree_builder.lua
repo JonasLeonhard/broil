@@ -297,10 +297,6 @@ function Tree_Builder:as_tree(bline_ids)
   local tree_lines = {}
   for _, bline_id in ipairs(bline_ids) do
     local bline = self.blines[bline_id]
-    -- there might be dirs we havent entered yet. Since we need to count those dirs, we load them
-    if (bline:can_enter() and #bline.children == 0) then
-      self:load_children(bline.id)
-    end
 
     -- set amount of unlisted children
     bline.unlisted = #bline.children - (bline.next_child_idx - 1)
@@ -311,7 +307,7 @@ function Tree_Builder:as_tree(bline_ids)
     end
   end
 
-  -- sorting paths intro clusters
+  -- sorting paths into tree-clusters
   table.sort(tree_lines, function(a, b)
     return (a.path:lower() .. '/') < (b.path:lower() .. '/') -- case insensitive alphabetical
   end)

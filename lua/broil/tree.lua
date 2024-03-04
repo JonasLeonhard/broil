@@ -1,6 +1,8 @@
 local Tree = {}
 Tree.__index = Tree
 
+local webdevicons = require('nvim-web-devicons')
+
 --- @param options broil.TreeOptions
 function Tree:new(options)
   local tree = {}
@@ -13,18 +15,57 @@ function Tree:new(options)
   tree.win_id = options.win_id
 
   tree.selection_ns_id = vim.api.nvim_create_namespace('BroilSelection')
+  tree.ext_marks_ns_id = vim.api.nvim_create_namespace('BroilTreeExtMarks')
+  tree.highlight_ns_id = vim.api.nvim_create_namespace('BroilTreeHighlights')
 
   return tree
 end
 
 function Tree:render()
   vim.api.nvim_buf_set_lines(self.buf_id, 0, -1, false, {})
-  for index, bline in ipairs(self.lines) do
-    -- local indent = string.rep('  ', bline.depth - 1)
+  vim.api.nvim_buf_clear_namespace(self.buf_id, self.ext_marks_ns_id, 0, -1)
 
-    vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false,
-      { self:render_branch_icons(bline, index) ..
-      self:render_name(bline) .. ' dbg: ' .. bline.depth })
+  for index, bline in ipairs(self.lines) do
+    local rendered_line = self:render_name(bline)
+
+    -- Remove newline characters from the rendered_line
+    rendered_line = rendered_line:gsub('\n', '')
+
+    -- Render the line
+    vim.api.nvim_buf_set_lines(self.buf_id, index - 1, index - 1, false, { rendered_line })
+
+
+    -- Render TreeLines
+    local tree_lines = self:render_tree_lines(bline, index)
+    vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0,
+      { virt_text = { { tree_lines, 'BroilTreeLines' } }, virt_text_pos = 'inline' })
+
+    -- Render File Icons
+    local file_icon, color, file_extension = self:render_icon(bline)
+    vim.api.nvim_command('highlight BroilTreeIcons_' .. file_extension .. ' guifg=' .. color) -- highlight Icon in color
+    vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0,
+      { virt_text = { { file_icon, 'BroilTreeIcons_' .. file_extension } }, virt_text_pos = 'inline' })
+
+
+    -- Render highlights
+    if (bline.file_type == 'directory') then
+      vim.api.nvim_command('highlight BroilDirLine guifg=#89b4fa')
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilDirLine', index - 1, 0, -1)
+    end
+
+    if (bline.line_type == 'pruning') then
+      vim.api.nvim_command('highlight BroilPruningLine guifg=#a6adc8')
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilPruningLine', index - 1, 0, -1)
+    end
+
+    -- search filter highlighting
+    if bline.fzf_pos then
+      vim.api.nvim_command('highlight BroilSearchTerm guifg=#f9e2af')
+      for _, idx in ipairs(bline.fzf_pos) do
+        vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilSearchTerm', index - 1, idx - 1,
+          idx)
+      end
+    end
   end
 end
 
@@ -40,7 +81,7 @@ function Tree:render_name(bline)
   return bline.relative_path
 end
 
-function Tree:render_branch_icons(bline, bline_index)
+function Tree:render_tree_lines(bline, bline_index)
   local rendered_branch = ''
 
   for depth = 0, bline.depth do
@@ -55,11 +96,33 @@ function Tree:render_branch_icons(bline, bline_index)
         rendered_branch = rendered_branch .. "└──"
       end
     else
-      rendered_branch = rendered_branch .. '   ' -- TODO: get file icon
+      -- We dont want to add space right before the line, as that space if reserved for a file icon
+      if depth ~= bline.depth then
+        rendered_branch = rendered_branch .. '   '
+      end
     end
   end
 
   return rendered_branch
+end
+
+function Tree:render_icon(bline)
+  if (bline.file_type == 'directory') then
+    return '  ', '#89b4fa', 'directory'
+  end
+
+  if (bline.line_type == 'pruning') then
+    return '󱞃  ', '#a6adc8', 'pruning'
+  end
+
+  -- TODO: better way to handle file extensions?
+  local file_extension = bline.name:match("%.([^%.]+)$")
+  if (file_extension) then
+    file_extension = file_extension:gsub("%W", "_") -- This will replace any character that is not a letter or a digit with an underscore, ensuring that `line_filetype` is always a valid group name.
+  end
+
+  local icon, color = webdevicons.get_icon_color(bline.name, file_extension)
+  return icon .. '  ', color, file_extension or 'unknown'
 end
 
 function Tree:render_selection()
@@ -73,11 +136,11 @@ function Tree:render_selection()
 
       vim.api.nvim_buf_clear_namespace(self.buf_id, self.selection_ns_id, 0, -1)
       vim.api.nvim_command('highlight BroilSelection guibg=#45475a')
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.selection_ns_id, 'BroilSelection', self.selected_index, 0,
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.selection_ns_id, 'BroilSelection', self.selected_index - 1, 0,
         -1)
 
       -- Set the cursor to the selected line and scroll to it
-      vim.api.nvim_win_set_cursor(self.win_id, { self.selected_index + 1, 0 })
+      vim.api.nvim_win_set_cursor(self.win_id, { self.selected_index, 0 })
     end)
   end
 end
