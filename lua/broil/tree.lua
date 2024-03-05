@@ -47,7 +47,7 @@ function Tree:render()
       { virt_text = { { file_icon, 'BroilTreeIcons_' .. file_extension } }, virt_text_pos = 'inline' })
 
 
-    -- Render highlights
+    -- Render Icon highlights
     if (bline.file_type == 'directory') then
       vim.api.nvim_command('highlight BroilDirLine guifg=#89b4fa')
       vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilDirLine', index - 1, 0, -1)
@@ -56,6 +56,15 @@ function Tree:render()
     if (bline.line_type == 'pruning') then
       vim.api.nvim_command('highlight BroilPruningLine guifg=#a6adc8')
       vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilPruningLine', index - 1, 0, -1)
+    end
+
+    -- Render relative path dir parts
+    if (self.pattern and bline.fzf_pos) then
+      vim.api.nvim_command('highlight BroilRelativeLine guifg=#74c7ec')
+      local end_dir = rendered_line:find("/[^/]*$")
+      if end_dir then
+        vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilRelativeLine', index - 1, 0, end_dir - 1)
+      end
     end
 
     -- search filter highlighting
