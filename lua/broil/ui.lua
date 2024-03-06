@@ -4,39 +4,15 @@ local ui = {
   -- #Content
   buf_id = nil,
   win_id = nil,
-  float_win = {
-    relative = "editor",
-    width = vim.o.columns,                     -- 100% width
+  tree_win = {
     height = math.ceil(vim.o.lines * 0.6) - 1, -- 60% height
-    col = 0,
-    row = vim.o.lines,
-    style = "minimal",
-    title = "broil",
-    border = {
-      { "┌", "BroilFloatBorder" },
-      { "─", "BroilFloatBorder" },
-      { "┐", "BroilFloatBorder" },
-      { "│", "BroilFloatBorder" },
-      { "┘", "BroilFloatBorder" },
-      { "─", "BroilFloatBorder" },
-      { "└", "BroilFloatBorder" },
-      { "│", "BroilFloatBorder" },
-    },
-    zindex = 50,
   },
   -- #Search
   search_win_id = nil,
   search_win = {
-    relative = "editor",
-    width = vim.o.columns, -- 100% width
-    height = 1,            -- 60% height
-    col = 0,
-    row = vim.o.lines - 1,
-    style = "minimal",
-    zindex = 51,
+    height = 1,     -- 1line height
   },
   search_term = "", -- current search filter,
-  tree = nil        -- current tree
 }
 
 local Tree_Builder = require('broil.tree_builder')
@@ -52,15 +28,59 @@ ui.create_tree_window = function(dir)
   vim.b[ui.buf_id].modifiable = true
   vim.wo.signcolumn = 'yes'
 
-  -- -- 2. set the tree dir to the root path. TODO: search_input_listener called initially
-
-  -- 3. create a new tree buffer window
+  -- 2. create a new tree buffer window
   if (ui.win_id ~= nil) then
     vim.api.nvim_win_close(ui.win_id, true)
   end
-  ui.float_win.title = " " .. 'TODO: root path?' .. "| [" .. ui.mode .. "]"
-  ui.win_id = vim.api.nvim_open_win(ui.buf_id, false, ui.float_win)
+
+  -- Create a split window with a specific height
+  vim.api.nvim_command(ui.tree_win.height .. 'split')
+
+  -- Get the window ID of the new split window
+  ui.win_id = vim.api.nvim_get_current_win()
+
+  -- Set the buffer of the new split window
+  vim.api.nvim_win_set_buf(ui.win_id, ui.buf_id)
 end
+
+ui.create_search_window = function()
+  -- Create a buffer for the search window
+  ui.search_buf_id = vim.api.nvim_create_buf(false, true)
+
+  -- Set the text width of the buffer to the width of the window
+  vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width)
+
+  -- If a search window already exists, close it
+  if (ui.search_win_id ~= nil) then
+    vim.api.nvim_win_close(ui.search_win_id, true)
+  end
+
+  -- Create a split window with a specific height for the search window
+  vim.api.nvim_command(ui.search_win.height .. 'split')
+
+  -- Get the window ID of the new split window
+  ui.search_win_id = vim.api.nvim_get_current_win()
+
+  -- Set the buffer of the new split window to the search buffer
+  vim.api.nvim_win_set_buf(ui.search_win_id, ui.search_buf_id)
+
+  -- Start insert mode in the new search window
+  vim.api.nvim_command('startinsert')
+
+
+  -- Define a namespace for your extmarks
+  local ns_id = vim.api.nvim_create_namespace('BroilSearchIcon')
+
+  -- Set the initial search term
+  ui.set_search("")
+
+  -- Set the extmark at the beginning of the buffer and styling
+  vim.api.nvim_command('sign define BroilSearchIcon text=󰥨 ')
+  vim.api.nvim_command('sign place 1 line=1 name=BroilSearchIcon buffer=' .. ui.search_buf_id)
+  vim.api.nvim_command('setlocal nonumber')
+  vim.api.nvim_command('setlocal norelativenumber')
+end
+
 
 
 --- Event Listener that gets called when edits are made to the tree buffer
@@ -68,8 +88,8 @@ ui.on_edits_made_listener = function()
   vim.api.nvim_buf_attach(ui.buf_id, false, {
     on_lines = function()
       -- Change the border of the floating window when changes are made to yellow
-      vim.api.nvim_command('highlight BroilFloatBorder guifg=#f9e2af')
-      vim.api.nvim_win_set_config(ui.win_id, ui.float_win)
+      -- vim.api.nvim_command('highlight BroilFloatBorder guifg=#f9e2af')
+      -- vim.api.nvim_win_set_config(ui.win_id, ui.tree_win)
     end
   })
 end
@@ -86,7 +106,7 @@ ui.on_search_input_listener = function()
         local open_dir = fs.get_dir_of_current_window_or_nvim_cwd()
         local builder = Tree_Builder:new(open_dir, {
           pattern = ui.search_term,
-          optimal_lines = ui.float_win.height
+          optimal_lines = ui.tree_win.height
         })
         local tree_build = builder:build_tree()
 
@@ -160,11 +180,11 @@ ui.open_parent_dir = function()
 end
 
 --- open a floating window with a tree view of the current file's directory
-ui.open_float = function()
+ui.open = function()
+  -- 1. create a search prompt at the bottom
   ui.create_tree_window()
-
-  -- 3. create a search prompt at the bottom
   ui.create_search_window()
+
 
   -- 4. attach event listeners
   ui.on_edits_made_listener()
@@ -174,15 +194,7 @@ ui.open_float = function()
   keymap.attach();
 end
 
-ui.create_search_window = function()
-  ui.search_buf_id = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width) -- Set text width to the width of the window
-  ui.search_win_id = vim.api.nvim_open_win(ui.search_buf_id, true, ui.search_win) -- Open a floating focused search window
-  vim.api.nvim_command('startinsert')
-  ui.set_search("")
-end
-
-ui.close_float = function()
+ui.close = function()
   if (ui.win_id ~= nil) then
     vim.api.nvim_win_close(ui.win_id, true)
     ui.win_id = nil
@@ -199,6 +211,10 @@ end
 ui.set_search = function(search_term)
   ui.search_term = search_term
   vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { search_term })
+end
+
+ui.switch_mode = function()
+  print("switch mode")
 end
 
 return ui

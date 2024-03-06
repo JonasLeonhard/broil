@@ -12,10 +12,15 @@ end
 
 keymap.attach = function()
   keymap.map(ui.buf_id, 'n', config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
-  keymap.map(ui.buf_id, 'n', config.mappings.help, ui.help, { desc = 'Synchronize' })
+  keymap.map(ui.buf_id, 'i', config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
+  keymap.map(ui.search_buf_id, 'n', config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
+  keymap.map(ui.search_buf_id, 'i', config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
+  keymap.map(ui.buf_id, 'n', config.mappings.help, ui.help, { desc = 'Help' })
 
-  keymap.map(ui.search_buf_id, 'n', config.mappings.close_float, ui.close_float, { desc = 'Close Float' })
-  keymap.map(ui.search_buf_id, 'i', config.mappings.close_float, ui.close_float, { desc = 'Close Float' })
+  keymap.map(ui.search_buf_id, 'n', config.mappings.close_float, ui.close, { desc = 'Close' })
+  keymap.map(ui.search_buf_id, 'i', config.mappings.close_float, ui.close, { desc = 'Close' })
+  keymap.map(ui.buf_id, 'n', config.mappings.close_float, ui.close, { desc = 'Close' })
+  keymap.map(ui.buf_id, 'i', config.mappings.close_float, ui.close, { desc = 'Close' })
 
   keymap.map(ui.search_buf_id, 'n', config.mappings.select_next_node, ui.select_next_node, { desc = 'Select next node' })
   keymap.map(ui.search_buf_id, 'i', config.mappings.select_next_node, ui.select_next_node, { desc = 'Select next node' })

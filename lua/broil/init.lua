@@ -14,7 +14,7 @@ broil.setup = function(opts)
 end
 
 broil.open = function()
-  ui.open_float()
+  ui.open()
 end
 
 return broil;
