@@ -11,35 +11,39 @@ keymap.map = function(buf_id, mode, lhs, rhs, opts)
 end
 
 keymap.attach = function()
-  keymap.map(ui.buf_id, 'n', config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
-  keymap.map(ui.buf_id, 'i', config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
-  keymap.map(ui.search_buf_id, 'n', config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
-  keymap.map(ui.search_buf_id, 'i', config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
+  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.synchronize, filesystem.synchronize,
+    { desc = 'Synchronize' })
   keymap.map(ui.buf_id, 'n', config.mappings.help, ui.help, { desc = 'Help' })
 
-  keymap.map(ui.search_buf_id, 'n', config.mappings.close_float, ui.close, { desc = 'Close' })
-  keymap.map(ui.search_buf_id, 'i', config.mappings.close_float, ui.close, { desc = 'Close' })
-  keymap.map(ui.buf_id, 'n', config.mappings.close_float, ui.close, { desc = 'Close' })
-  keymap.map(ui.buf_id, 'i', config.mappings.close_float, ui.close, { desc = 'Close' })
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.close, ui.close, { desc = 'Close' })
+  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.close, ui.close, { desc = 'Close' })
+  keymap.map(ui.buf_id, { 'n', 'v' }, '<C-w>q', ui.close, { desc = 'Close' })
+  keymap.map(ui.search_buf_id, { 'n', 'v' }, '<C-w>q', ui.close, { desc = 'Close' })
 
-  keymap.map(ui.search_buf_id, 'n', config.mappings.select_next_node, ui.select_next_node, { desc = 'Select next node' })
-  keymap.map(ui.search_buf_id, 'i', config.mappings.select_next_node, ui.select_next_node, { desc = 'Select next node' })
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.select_next_node, ui.select_next_node,
+    { desc = 'Select next node' })
 
-  keymap.map(ui.search_buf_id, 'n', config.mappings.select_prev_node, ui.select_prev_node, { desc = 'Select next node' })
-  keymap.map(ui.search_buf_id, 'i', config.mappings.select_prev_node, ui.select_prev_node, { desc = 'Select next node' })
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.select_prev_node, ui.select_prev_node,
+    { desc = 'Select next node' })
 
-  keymap.map(ui.search_buf_id, 'n', config.mappings.open_selected_node, ui.open_selected_node,
+  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_selected_node, ui.open_selected_node,
     { desc = 'Open selected node' })
-  keymap.map(ui.search_buf_id, 'i', config.mappings.open_selected_node, ui.open_selected_node,
-    { desc = 'Open selected node' })
-
-  keymap.map(ui.search_buf_id, 'n', config.mappings.open_selected_node2, ui.open_selected_node,
-    { desc = 'Open selected node' })
-  keymap.map(ui.search_buf_id, 'i', config.mappings.open_selected_node2, ui.open_selected_node,
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node, ui.open_selected_node,
     { desc = 'Open selected node' })
 
-  keymap.map(ui.search_buf_id, 'n', config.mappings.open_parent_dir, ui.open_parent_dir, { desc = 'Open parent dir' })
-  keymap.map(ui.search_buf_id, 'i', config.mappings.open_parent_dir, ui.open_parent_dir, { desc = 'Open parent dir' })
+  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, ui.open_selected_node,
+    { desc = 'Open selected node' })
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, ui.open_selected_node,
+    { desc = 'Open selected node' })
+
+  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_parent_dir, ui.open_parent_dir,
+    { desc = 'Open parent dir' })
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_parent_dir, ui.open_parent_dir,
+    { desc = 'Open parent dir' })
+
+  keymap.map(ui.search_buf_id, { 'n' }, config.mappings.pop_history, ui.pop_history,
+    { desc = 'Pop history item' })
 end
 
 return keymap

@@ -26,6 +26,7 @@
 --- @class broil.TreeOptions
 --- @field pattern string
 --- @field lines broil.BLine[]
---- @field selected_index integer
+--- @field highest_score_index integer
+--- @field open_path_index integer -- if broil was opened with a path for a file / dir, this is the index of the line
 --- @field buf_id integer
 --- @field win_id integer

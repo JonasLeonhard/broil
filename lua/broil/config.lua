@@ -3,9 +3,10 @@ local config = {
     -- general
     help = '?',
     synchronize = '<C-y>',
+    close = '<C-q>',
+    pop_history = '<ESC>',
 
     -- search
-    close_float = '<C-q>',
     select_next_node = '<C-j>',
     select_prev_node = '<C-k>',
     open_selected_node = '<CR>',

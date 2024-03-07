@@ -11,7 +11,8 @@ function Tree:new(options)
   tree.pattern = options.pattern
   tree.buf_id = options.buf_id
   tree.lines = options.lines
-  tree.selected_index = options.selected_index
+  tree.highest_score_index = options.highest_score_index
+  tree.open_path_index = options.open_path_index
   tree.win_id = options.win_id
 
   tree.selection_ns_id = vim.api.nvim_create_namespace('BroilSelection')
@@ -134,24 +135,14 @@ function Tree:render_icon(bline)
   return icon .. '  ', color, file_extension or 'unknown'
 end
 
-function Tree:render_selection()
-  if (self.selected_index) then
-    vim.schedule(function()
-      -- reset the render index if out of bounds of the window
-      local lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
-      if (self.selected_index > #lines - 1) then
-        self.selected_render_index = #lines - 1
-      end
-
-      vim.api.nvim_buf_clear_namespace(self.buf_id, self.selection_ns_id, 0, -1)
-      vim.api.nvim_command('highlight BroilSelection guibg=#45475a')
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.selection_ns_id, 'BroilSelection', self.selected_index - 1, 0,
-        -1)
-
-      -- Set the cursor to the selected line and scroll to it
-      vim.api.nvim_win_set_cursor(self.win_id, { self.selected_index, 0 })
-    end)
-  end
+function Tree:initial_selection()
+  vim.schedule(function()
+    if (self.pattern ~= '') then
+      vim.api.nvim_win_set_cursor(self.win_id, { self.highest_score_index, 0 })
+    else -- open the path
+      vim.api.nvim_win_set_cursor(self.win_id, { self.open_path_index, 0 })
+    end
+  end)
 end
 
 function Tree:has_branch(line_index, depth)
@@ -164,33 +155,31 @@ function Tree:has_branch(line_index, depth)
 end
 
 function Tree:select_next()
-  local new_index = self.selected_index + 1
-  local lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
+  -- Get the current cursor position
+  local cursor_pos = vim.api.nvim_win_get_cursor(self.win_id)
+  local cursor_y = cursor_pos[1] + 1
 
-  if (new_index > #lines - 1) then
-    self.selected_index = 1
-  else
-    self.selected_index = new_index
+  -- reset the render index if out of bounds of the window
+  local lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
+  if (cursor_y > #lines - 1) then
+    cursor_y = 1
   end
 
-  self:render_selection()
+  vim.api.nvim_win_set_cursor(self.win_id, { cursor_y, 0 })
 end
 
 function Tree:select_prev()
-  local lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
-  local new_index = (self.selected_index or #lines - 1) - 1
+  -- Get the current cursor position
+  local cursor_pos = vim.api.nvim_win_get_cursor(self.win_id)
+  local cursor_y = cursor_pos[1] - 1
 
-  if (new_index < 1) then
-    local last_line_index = #lines - 1
-    if (last_line_index < 0) then
-      return
-    end
-    self.selected_index = last_line_index
-  else
-    self.selected_index = new_index
+  -- reset the render index if out of bounds of the window
+  local lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
+  if (cursor_y < 1) then
+    cursor_y = #lines - 1
   end
 
-  self:render_selection()
+  vim.api.nvim_win_set_cursor(self.win_id, { cursor_y, 0 })
 end
 
 return Tree

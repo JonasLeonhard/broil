@@ -13,6 +13,8 @@ local ui = {
     height = 1,     -- 1line height
   },
   search_term = "", -- current search filter,
+  open_path = nil,
+  open_history = {} -- we can reset to this later
 }
 
 local Tree_Builder = require('broil.tree_builder')
@@ -33,21 +35,17 @@ ui.create_tree_window = function(dir)
     vim.api.nvim_win_close(ui.win_id, true)
   end
 
+  ui.open_path = dir
+
   -- Create a split window with a specific height
   vim.api.nvim_command(ui.tree_win.height .. 'split')
-
-  -- Get the window ID of the new split window
   ui.win_id = vim.api.nvim_get_current_win()
-
-  -- Set the buffer of the new split window
   vim.api.nvim_win_set_buf(ui.win_id, ui.buf_id)
 end
 
 ui.create_search_window = function()
   -- Create a buffer for the search window
   ui.search_buf_id = vim.api.nvim_create_buf(false, true)
-
-  -- Set the text width of the buffer to the width of the window
   vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width)
 
   -- If a search window already exists, close it
@@ -57,24 +55,17 @@ ui.create_search_window = function()
 
   -- Create a split window with a specific height for the search window
   vim.api.nvim_command(ui.search_win.height .. 'split')
-
-  -- Get the window ID of the new split window
   ui.search_win_id = vim.api.nvim_get_current_win()
-
-  -- Set the buffer of the new split window to the search buffer
   vim.api.nvim_win_set_buf(ui.search_win_id, ui.search_buf_id)
 
   -- Start insert mode in the new search window
   vim.api.nvim_command('startinsert')
 
-
-  -- Define a namespace for your extmarks
-  local ns_id = vim.api.nvim_create_namespace('BroilSearchIcon')
-
   -- Set the initial search term
   ui.set_search("")
 
   -- Set the extmark at the beginning of the buffer and styling
+  vim.api.nvim_create_namespace('BroilSearchIcon')
   vim.api.nvim_command('sign define BroilSearchIcon text=󰥨 ')
   vim.api.nvim_command('sign place 1 line=1 name=BroilSearchIcon buffer=' .. ui.search_buf_id)
   vim.api.nvim_command('setlocal nonumber')
@@ -102,25 +93,7 @@ ui.on_search_input_listener = function()
       ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
 
       utils.debounce(function()
-        -- TODO - build tree from search
-        local open_dir = fs.get_dir_of_current_window_or_nvim_cwd()
-        local builder = Tree_Builder:new(open_dir, {
-          pattern = ui.search_term,
-          optimal_lines = ui.tree_win.height
-        })
-        local tree_build = builder:build_tree()
-
-        -- print("tree_build: ", vim.inspect(tree_build))
-        ui.tree = Tree:new({
-          pattern = ui.search_term,
-          buf_id = ui.buf_id,
-          win_id = ui.win_id,
-          lines = tree_build.lines,
-          selected_index = tree_build.highest_score_index,
-        })
-        ui.tree:render()
-        ui.tree:render_selection()
-        builder:destroy()
+        ui.render()
       end, 100)()
     end
   })
@@ -151,38 +124,54 @@ end
 --- It enters the node if its a dir,
 --- otherwise it opens the file in a new buffer
 ui.open_selected_node = function()
-  -- if (Tree.selected_render_index == nil) then
-  --   return
-  -- end
-  --
-  -- local node = Tree:find_by('render_index', Tree.selected_render_index)
-  --
-  -- if (node == nil) then
-  --   return
-  -- end
-  --
-  -- if (node.type == "directory") then
-  --   ui.set_search("")
-  --   ui.create_tree_window(node.full_path)
-  -- else
-  --   ui.close_float()
-  --   vim.api.nvim_command('edit ' .. node.full_path)
-  --   vim.api.nvim_command('stopinsert')
-  -- end
+  local cursor_pos = vim.api.nvim_win_get_cursor(ui.win_id)
+  local cursor_y = cursor_pos[1]
+
+  if (not ui.tree or cursor_y == 1) then
+    return
+  end
+
+  local node = ui.tree.lines[cursor_y]
+
+  if (not node) then
+    return
+  end
+
+  if (node.file_type == "directory") then
+    ui.open_path = node.path
+    ui.set_search("")
+    ui.render()
+  else
+    ui.close()
+    vim.api.nvim_command('edit ' .. node.path)
+    vim.api.nvim_command('stopinsert')
+  end
 end
 
 --- Open the parent dir of the currently opened tree_view -> vim.fn.fnamemodify(Tree.root_path, ":h")
 ui.open_parent_dir = function()
-  -- local parent_dir = vim.fn.fnamemodify(Tree.root_path, ":h")
-  -- if (parent_dir) then
-  --   ui.create_tree_window(parent_dir)
-  -- end
+  if (not ui.tree) then
+    return
+  end
+
+  local node = ui.tree.lines[1]
+
+  if (not node) then
+    return
+  end
+
+  local parent_dir = vim.fn.fnamemodify(node.path, ":h")
+
+  if (parent_dir) then
+    ui.open_path = parent_dir
+    ui.render()
+  end
 end
 
 --- open a floating window with a tree view of the current file's directory
 ui.open = function()
   -- 1. create a search prompt at the bottom
-  ui.create_tree_window()
+  ui.create_tree_window(fs.get_path_of_current_window_or_nvim_cwd())
   ui.create_search_window()
 
 
@@ -204,8 +193,16 @@ ui.close = function()
     vim.api.nvim_win_close(ui.search_win_id, true)
     ui.search_win_id = nil
   end
+  vim.api.nvim_command('stopinsert')
+end
 
-  -- Tree:destroy()
+ui.pop_history = function()
+  if (#ui.open_history > 1) then
+    table.remove(ui.open_history, #ui.open_history)
+    local path_before = ui.open_history[#ui.open_history]
+    ui.open_path = path_before
+    ui.render()
+  end
 end
 
 ui.set_search = function(search_term)
@@ -213,8 +210,31 @@ ui.set_search = function(search_term)
   vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { search_term })
 end
 
-ui.switch_mode = function()
-  print("switch mode")
+ui.render = function()
+  if (not ui.open_path) then
+    ui.open_path = fs.get_path_of_current_window_or_nvim_cwd()
+  end
+
+  if (ui.open_history[#ui.open_history] ~= ui.open_path) then -- add the path to the history if its not the same
+    table.insert(ui.open_history, ui.open_path)
+  end
+
+  local builder = Tree_Builder:new(ui.open_path, {
+    pattern = ui.search_term,
+    optimal_lines = ui.tree_win.height
+  })
+  local tree_build = builder:build_tree()
+  ui.tree = Tree:new({
+    pattern = ui.search_term,
+    buf_id = ui.buf_id,
+    win_id = ui.win_id,
+    lines = tree_build.lines,
+    highest_score_index = tree_build.highest_score_index,
+    open_path_index = tree_build.open_path_index,
+  })
+  ui.tree:render()
+  ui.tree:initial_selection()
+  builder:destroy()
 end
 
 return ui

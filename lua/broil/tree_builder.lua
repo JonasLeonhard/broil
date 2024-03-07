@@ -11,7 +11,13 @@ function Tree_Builder:new(path, options)
   local tree_builder = {}
   setmetatable(tree_builder, Tree_Builder)
 
-  tree_builder.path = path
+  local dir_of_path = path
+  if (vim.loop.fs_stat(path).type ~= 'directory') then
+    dir_of_path = vim.fn.fnamemodify(path, ':h')
+  end
+
+  tree_builder.path = dir_of_path                    -- the dir of the opened path
+  tree_builder.open_path = path                      -- the original open path
   tree_builder.optimal_lines = options.optimal_lines -- can be nil for infinite search
   tree_builder.pattern = options.pattern
 
@@ -22,7 +28,7 @@ function Tree_Builder:new(path, options)
 
   local bline = BLine:new({
     parent_id = nil,
-    path = path,
+    path = tree_builder.path,
     relative_path = '',
     depth = 0,
     name = vim.fn.fnamemodify(path, ':t') or '', -- tail of tree path,
@@ -134,51 +140,6 @@ function Tree_Builder:gather_lines()
         count = count + 1
         self.blines[bline.parent_id].nb_kept_children = self.blines[bline.parent_id].nb_kept_children + 1;
       end
-    end
-
-    -- build a removal queue from the bottom up the tree.
-    -- the removal queue will remove all nodes that have no kept children.
-    -- That means we move from the bottom to the top of the tree and remove nodes one by one, updating the removal_queue whenever we remove a node and its parent has no children left
-    local remove_queue = {}
-    for i = 2, #out_lines do
-      local bline = self.blines[out_lines[i]]
-      if (bline.has_match and bline.nb_kept_children == 0 and bline.depth > 1) then
-        table.insert(remove_queue, {
-          id = bline.id,
-          score = bline.score
-        })
-      end
-    end
-    -- sort the queue by score, lowerst score first
-    table.sort(remove_queue, function(a, b)
-      return a.score < b.score
-    end)
-
-    while count > self.optimal_lines do
-      local lowest_score_queue_item = table.remove(remove_queue, 1)
-
-      if (not lowest_score_queue_item) then
-        break
-      end
-
-      self.blines[lowest_score_queue_item.id].has_match = false
-      local parent_id = self.blines[lowest_score_queue_item.id].parent_id
-      local parent = self.blines[parent_id]
-      parent.nb_kept_children = parent.nb_kept_children - 1
-      -- walk back the number of visited nodes aswell. This will update the unlisted property
-      parent.next_child_idx = parent.next_child_idx - 1
-
-      if (parent.nb_kept_children == 0) then
-        table.insert(remove_queue, {
-          id = parent_id,
-          score = parent.score
-        })
-        table.sort(remove_queue, function(a, b)
-          return a.score < b.score
-        end)
-      end
-
-      count = count - 1
     end
   end
 
@@ -295,6 +256,8 @@ end
 function Tree_Builder:as_tree(bline_ids)
   -- build tree_lines with only matching nodes from ids
   local tree_lines = {}
+  local bid_lines = {}
+  local bid_parents = {}
   for _, bline_id in ipairs(bline_ids) do
     local bline = self.blines[bline_id]
 
@@ -305,23 +268,69 @@ function Tree_Builder:as_tree(bline_ids)
     if (self.pattern == '' or bline.has_match) then
       table.insert(tree_lines, bline)
     end
+
+    if (bline.parent_id) then
+      bid_parents[bline.id] = bline.parent_id
+    end
+    bid_lines[bline.id] = bline
+  end
+
+  -- we need to order the lines to build the tree.
+  -- It's a little complicated because
+  --  - we want a case insensitive sort
+  --  - we still don't want to confuse the children of AA and Aa
+  --  - a node can come from a not parent node, when we followed a link
+  local sort_paths = {}
+  for i = 1, #tree_lines do
+    local sort_path = ''
+    local bid = tree_lines[i].id;
+
+    while true do
+      local sort_prefix = ''
+      local bline = bid_lines[bid]
+
+      if (config.sort_option == 'TypeDirsFirst') then
+        if (bline.file_type == 'directory') then
+          sort_prefix = '              '
+        else
+          sort_prefix = vim.fn.expand(bline.path .. ':e') -- path_extension
+        end
+      else
+        if (bline.file_type == 'directory') then
+          sort_prefix = '~~~~~~~~~~~~~~'
+        else
+          sort_prefix = vim.fn.expand(bline.path .. ':e') -- path_extension
+        end
+      end
+      sort_path = string.format("%s%s-%s/%s", sort_prefix, bline.name:lower(), bline.id, sort_path)
+      if (bid_parents[bid]) then
+        bid = bid_parents[bid]
+      else
+        break
+      end
+    end
+    sort_paths[tree_lines[i].id] = sort_path
   end
 
   -- sorting paths into tree-clusters
   table.sort(tree_lines, function(a, b)
-    return (a.path:lower() .. '/') < (b.path:lower() .. '/') -- case insensitive alphabetical
+    return sort_paths[a.id] < sort_paths[b.id]
   end)
 
-  -- get the best scoring node to select later
+  -- get the best scoring node & the opened index to select later
   local highest_score_index = 1
+  local open_path_index = 1
 
-  if (self.pattern ~= '') then -- its always the root if you searched for nothing
-    for i, bline in ipairs(tree_lines) do
-      if (bline.score > tree_lines[highest_score_index].score) then
-        highest_score_index = i
-      end
+  for i, bline in ipairs(tree_lines) do
+    if (bline.score > tree_lines[highest_score_index].score) then
+      highest_score_index = i
+    end
+
+    if (bline.path == self.open_path) then
+      open_path_index = i
     end
   end
+
   -- iterate the tree_lines from bottom to top, skip the root node at index 1
   -- get the parent line and create a range from the parent to the current_line. start => parent_index + 1, and end => current_index
   -- set the left_branches of all lines in the range to the depth
@@ -363,7 +372,8 @@ function Tree_Builder:as_tree(bline_ids)
 
   return {
     lines = tree_lines,
-    highest_score_index = highest_score_index
+    highest_score_index = highest_score_index,
+    open_path_index = open_path_index,
   }
 end
 
