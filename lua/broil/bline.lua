@@ -2,9 +2,9 @@ local config = require('broil.config')
 
 local id_counter = 0;
 
-local BLine = {
-  id = 0,
-}
+local bline_id_cache = {} -- table: path -> bline_id
+
+local BLine = {}
 BLine.__index = BLine
 
 --- @param options broil.BLine
@@ -13,12 +13,18 @@ function BLine:new(options)
   local bline = {}
   setmetatable(bline, BLine)
 
-  bline.id = id_counter
-  id_counter = id_counter + 1
-
   -- Iterate over all fields in options
   for k, v in pairs(options) do
     bline[k] = v
+  end
+
+  -- return the cached node id if it already exist, cache it otherwise
+  if (bline_id_cache[options.path]) then
+    bline.id = bline_id_cache[options.path]
+  else
+    bline.id = id_counter
+    bline_id_cache[options.path] = id_counter
+    id_counter = id_counter + 1
   end
 
   return bline

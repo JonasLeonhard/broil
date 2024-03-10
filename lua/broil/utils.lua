@@ -14,4 +14,16 @@ function utils.debounce(fn, delay)
   end
 end
 
+--- @return broil.BId|nil bid id of the line "linetext[bid]"
+function utils.get_bid_by_match(line)
+  if (line == nil) then return nil end
+
+  local id_str = line:match("%[(%d+)%]$")
+
+  local ok, res = pcall(tonumber, id_str)
+  if not ok then return nil end
+
+  return res
+end
+
 return utils;

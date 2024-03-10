@@ -27,8 +27,6 @@ keymap.attach = function()
   keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.select_prev_node, ui.select_prev_node,
     { desc = 'Select next node' })
 
-  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_selected_node, ui.open_selected_node,
-    { desc = 'Open selected node' })
   keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node, ui.open_selected_node,
     { desc = 'Open selected node' })
 
@@ -42,8 +40,13 @@ keymap.attach = function()
   keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_parent_dir, ui.open_parent_dir,
     { desc = 'Open parent dir' })
 
+  keymap.map(ui.buf_id, { 'n' }, config.mappings.pop_history, ui.pop_history,
+    { desc = 'Pop history item' })
   keymap.map(ui.search_buf_id, { 'n' }, config.mappings.pop_history, ui.pop_history,
     { desc = 'Pop history item' })
+
+  -- internal
+  keymap.map(ui.buf_id, { 'n' }, 'p', ui.paste)
 end
 
 return keymap

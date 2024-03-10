@@ -189,7 +189,7 @@ function Tree_Builder:load_children(bId)
         has_child_match = true
       end
 
-      table.insert(self.blines, bline_child.id, bline_child)
+      self.blines[bline_child.id] = bline_child
       table.insert(children, bline_child.id)
     end
   end)

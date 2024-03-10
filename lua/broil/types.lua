@@ -30,3 +30,8 @@
 --- @field open_path_index integer -- if broil was opened with a path for a file / dir, this is the index of the line
 --- @field buf_id integer
 --- @field win_id integer
+
+--- @class broil.Edit
+--- @field bid broil.BId|nil -- bline id the edit was made on
+--- @field path_from string -- path of what was edited
+--- @field path_to string|nil -- path of where it is edited to

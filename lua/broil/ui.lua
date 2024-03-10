@@ -41,6 +41,62 @@ ui.create_tree_window = function(dir)
   vim.api.nvim_command(ui.tree_win.height .. 'split')
   ui.win_id = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(ui.win_id, ui.buf_id)
+  vim.wo[ui.win_id].conceallevel = 3
+
+  -- build edits: todo, only call this after actual changes, not when the tree rerenders...
+  vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
+    buffer = ui.buf_id,
+    callback = function()
+      local current_lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
+      local edits = {}
+
+      -- build line_changes and new lines
+      for index, line in ipairs(current_lines) do
+        local path_id = utils.get_bid_by_match(line)
+        local bline = ui.tree:find_by_id(path_id)
+
+        local path_from = nil
+        local path_to = nil
+
+        if (bline) then
+          -- we edited a line with a blineid
+          path_from = bline.path
+
+          local path_head = vim.fn.fnamemodify(bline.path, ':h') or ''
+          -- remove leading whitespace before first char, remove path_id from the end, remove relative path
+          local edited_line = line:gsub("^%s*", ""):gsub("%[%d+%]$", "")
+          local edited_line_name = vim.fn.fnamemodify(edited_line, ':t')
+
+          if (edited_line_name ~= "") then
+            path_to = path_head .. '/' .. edited_line_name
+          end
+        else
+          -- we edited a line without a blineid
+          --
+          -- we probably want to get the path by iterating backwards from this line in the tree, until we hit a line with a parsable bid?
+          -- path_to = '/new/path'
+        end
+
+        if (path_from ~= path_to) then
+          local id = ('New:' .. index)
+          if (path_id) then
+            id = ('Bline:' .. path_id)
+          end
+          edits[id] = {
+            path_from = path_from,
+            path_to = path_to,
+          }
+        end
+
+        print("edits", vim.inspect(edits))
+
+        -- if (bline)then
+        -- the
+        -- local path_to = vim.fn.fnamemodify(bline.path, ':t')
+        --     print("bline with id:", bline)
+      end
+    end
+  })
 end
 
 ui.create_search_window = function()
@@ -70,19 +126,6 @@ ui.create_search_window = function()
   vim.api.nvim_command('sign place 1 line=1 name=BroilSearchIcon buffer=' .. ui.search_buf_id)
   vim.api.nvim_command('setlocal nonumber')
   vim.api.nvim_command('setlocal norelativenumber')
-end
-
-
-
---- Event Listener that gets called when edits are made to the tree buffer
-ui.on_edits_made_listener = function()
-  vim.api.nvim_buf_attach(ui.buf_id, false, {
-    on_lines = function()
-      -- Change the border of the floating window when changes are made to yellow
-      -- vim.api.nvim_command('highlight BroilFloatBorder guifg=#f9e2af')
-      -- vim.api.nvim_win_set_config(ui.win_id, ui.tree_win)
-    end
-  })
 end
 
 --- Attaches Event Listener that gets called when the search input is changed
@@ -176,8 +219,8 @@ ui.open = function()
 
 
   -- 4. attach event listeners
-  ui.on_edits_made_listener()
   ui.on_search_input_listener()
+  ui.on_yank()
 
   local keymap = require('broil.keymap')
   keymap.attach();
@@ -203,6 +246,38 @@ ui.pop_history = function()
     ui.open_path = path_before
     ui.render()
   end
+end
+
+--- if a yanked line has a blineId [id], we only copy the bline name and id,
+--- this prevents us from copying relative_paths when searching
+ui.on_yank = function()
+  vim.api.nvim_create_autocmd({ "TextYankPost" }, {
+    buffer = ui.buf_id,
+    callback = function()
+      local event = vim.v.event
+      local yanked_text = event.regcontents
+
+      for i, line in ipairs(yanked_text) do
+        local path_id = utils.get_bid_by_match(line)
+
+        -- change the yanked text if we yanked a bline
+        if (path_id) then
+          local bline = ui.tree:find_by_id(path_id)
+          if (bline) then
+            yanked_text[i] = bline.name .. '[' .. bline.id .. ']'
+          end
+        end
+      end
+
+      -- Now set the yank register to the processed text
+      vim.fn.setreg(event.regname, yanked_text, event.regtype)
+    end
+  })
+end
+
+-- we override the native paste functionality, because we strip out relative paths on yank
+ui.paste = function()
+  vim.api.nvim_command('normal! ""p')
 end
 
 ui.set_search = function(search_term)

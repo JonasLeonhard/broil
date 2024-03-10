@@ -17,6 +17,7 @@ function Tree:new(options)
 
   tree.selection_ns_id = vim.api.nvim_create_namespace('BroilSelection')
   tree.ext_marks_ns_id = vim.api.nvim_create_namespace('BroilTreeExtMarks')
+  tree.conceal_marks_ns_id = vim.api.nvim_create_namespace('BroilConcealMarks')
   tree.highlight_ns_id = vim.api.nvim_create_namespace('BroilTreeHighlights')
 
   return tree
@@ -32,21 +33,62 @@ function Tree:render()
     -- Remove newline characters from the rendered_line
     rendered_line = rendered_line:gsub('\n', '')
 
+    -- render conceal ids
+    local conceal_id = '[' .. bline.id .. ']'
+    rendered_line = rendered_line .. conceal_id
+
+    -- render indentation for icons
+    local tree_lines = self:render_tree_lines(bline, index)
+    local tree_lines_length = bline.depth * 3
+
+    local file_icon, color, file_extension = self:render_icon(bline)
+    local file_icon_length = 3
+
+    local indent = string.rep(' ', tree_lines_length) .. string.rep(' ', file_icon_length)
+    rendered_line = indent .. rendered_line
+
     -- Render the line
     vim.api.nvim_buf_set_lines(self.buf_id, index - 1, index - 1, false, { rendered_line })
 
-
     -- Render TreeLines
-    local tree_lines = self:render_tree_lines(bline, index)
-    vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0,
-      { virt_text = { { tree_lines, 'BroilTreeLines' } }, virt_text_pos = 'inline' })
+    local mark_id = vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0,
+      {
+        virt_text = { { tree_lines, 'BroilTreeLines' }, { file_icon, 'BroilTreeIcons_' .. file_extension } },
+        virt_text_pos = 'overlay',
+        invalidate = true,
+      })
 
     -- Render File Icons
-    local file_icon, color, file_extension = self:render_icon(bline)
     vim.api.nvim_command('highlight BroilTreeIcons_' .. file_extension .. ' guifg=' .. color) -- highlight Icon in color
-    vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0,
-      { virt_text = { { file_icon, 'BroilTreeIcons_' .. file_extension } }, virt_text_pos = 'inline' })
 
+    -- remove rendered marks on changes
+    vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
+      buffer = self.buf_id,
+      callback = function()
+        local mark_pos = vim.api.nvim_buf_get_extmark_by_id(self.buf_id, self.ext_marks_ns_id, mark_id,
+          { details = true })
+        if (not mark_pos[1] and not mark_pos[2]) then
+          return
+        end
+        local marks_of_line = vim.api.nvim_buf_get_extmarks(self.buf_id, self.ext_marks_ns_id, { mark_pos[1], 0 },
+          { mark_pos[1], -1 }, {})
+
+        -- delete all marks but the first if multiple are in one line
+        if #marks_of_line > 1 then
+          for i = 2, #marks_of_line do
+            vim.api.nvim_buf_del_extmark(self.buf_id, self.ext_marks_ns_id, marks_of_line[i][1])
+          end
+        end
+
+        -- delete marks in lines without indentation
+        local mark_line = vim.api.nvim_buf_get_lines(self.buf_id, mark_pos[1], mark_pos[1] + 1, false)
+        local mark_line_has_indent_inside = vim.fn.match(mark_line[1], indent) > -1
+
+        if (not mark_line_has_indent_inside) then
+          vim.api.nvim_buf_del_extmark(self.buf_id, self.ext_marks_ns_id, mark_id)
+        end
+      end
+    })
 
     -- Render Icon highlights
     if (bline.file_type == 'directory') then
@@ -72,23 +114,30 @@ function Tree:render()
     if bline.fzf_pos then
       vim.api.nvim_command('highlight BroilSearchTerm guifg=#f9e2af')
       for _, idx in ipairs(bline.fzf_pos) do
-        vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilSearchTerm', index - 1, idx - 1,
-          idx)
+        local idx_adjusted = #indent + idx
+        vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilSearchTerm', index - 1,
+          idx_adjusted - 1,
+          idx_adjusted)
       end
     end
   end
+
+  -- conceal ids at end of the line
+  vim.api.nvim_win_call(self.win_id, function()
+    vim.fn.matchadd('Conceal', [[\[\d\+\]$]])
+  end)
 end
 
 function Tree:render_name(bline)
-  if (bline.parent_id == nil) then -- the root bline
+  if (bline.parent_id == nil) then
     return bline.path
   end
 
-  if self.pattern == '' then
-    return bline.name
+  if (self.pattern ~= '') then
+    return bline.relative_path
   end
 
-  return bline.relative_path
+  return bline.name
 end
 
 function Tree:render_tree_lines(bline, bline_index)
@@ -180,6 +229,23 @@ function Tree:select_prev()
   end
 
   vim.api.nvim_win_set_cursor(self.win_id, { cursor_y, 0 })
+end
+
+--- @param bid broil.BId|nil bline.id
+--- @return broil.BLine|nil
+function Tree:find_by_id(bid)
+  if bid == nil then
+    return nil
+  end
+
+  local bline = nil
+  for _, tree_bline in ipairs(self.lines) do
+    if (tree_bline.id == bid) then
+      bline = tree_bline
+      break
+    end
+  end
+  return bline
 end
 
 return Tree
