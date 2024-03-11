@@ -91,14 +91,13 @@ ui.create_tree_window = function(dir)
             path_to = path_to,
           }
         end
-
-        print("edits", vim.inspect(edits))
-
         -- if (bline)then
         -- the
         -- local path_to = vim.fn.fnamemodify(bline.path, ':t')
         --     print("bline with id:", bline)
       end
+
+      print("edits", vim.inspect(edits))
     end
   })
 end
