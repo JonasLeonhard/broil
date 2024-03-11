@@ -163,6 +163,38 @@ ui.select_prev_node = function()
   ui.tree:select_prev()
 end
 
+ui.scroll_up = function()
+  if (not ui.tree) then
+    return
+  end
+
+  ui.tree:scroll_up()
+end
+
+ui.scroll_down = function()
+  if (not ui.tree) then
+    return
+  end
+
+  ui.tree:scroll_down()
+end
+
+ui.scroll_top_node = function()
+  if (not ui.tree) then
+    return
+  end
+
+  ui.tree:scroll_top_node()
+end
+
+ui.scroll_end = function()
+  if (not ui.tree) then
+    return
+  end
+
+  ui.tree:scroll_end()
+end
+
 --- Opens the currently selected tree node (Tree.selected_render_index)
 --- It enters the node if its a dir,
 --- otherwise it opens the file in a new buffer

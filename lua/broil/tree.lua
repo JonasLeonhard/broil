@@ -231,6 +231,42 @@ function Tree:select_prev()
   vim.api.nvim_win_set_cursor(self.win_id, { cursor_y, 0 })
 end
 
+--- scrolls up via ctrl-u
+function Tree:scroll_up()
+  vim.api.nvim_win_call(self.win_id, function()
+    local cursor = vim.api.nvim_win_get_cursor(self.win_id)
+    local new_cursor_y = cursor[1] - vim.wo.scroll
+    if new_cursor_y < 1 then
+      new_cursor_y = 1
+    end
+    vim.api.nvim_win_set_cursor(self.win_id, { new_cursor_y, cursor[2] })
+  end)
+end
+
+function Tree:scroll_down()
+  vim.api.nvim_win_call(self.win_id, function()
+    local cursor = vim.api.nvim_win_get_cursor(self.win_id)
+    local new_cursor_y = cursor[1] + vim.wo.scroll
+    local line_count = vim.api.nvim_buf_line_count(self.buf_id)
+    if new_cursor_y > line_count then
+      new_cursor_y = line_count
+    end
+    vim.api.nvim_win_set_cursor(self.win_id, { new_cursor_y, cursor[2] })
+  end)
+end
+
+function Tree:scroll_top_node()
+  vim.api.nvim_win_call(self.win_id, function()
+    vim.cmd('normal! gg')
+  end)
+end
+
+function Tree:scroll_end()
+  vim.api.nvim_win_call(self.win_id, function()
+    vim.cmd('normal! G')
+  end)
+end
+
 --- @param bid broil.BId|nil bline.id
 --- @return broil.BLine|nil
 function Tree:find_by_id(bid)
