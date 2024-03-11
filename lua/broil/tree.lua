@@ -20,10 +20,15 @@ function Tree:new(options)
   tree.conceal_marks_ns_id = vim.api.nvim_create_namespace('BroilConcealMarks')
   tree.highlight_ns_id = vim.api.nvim_create_namespace('BroilTreeHighlights')
 
+  -- internal state
+  tree.rendering = false
+
   return tree
 end
 
 function Tree:render()
+  self.rendering = true
+
   vim.api.nvim_buf_set_lines(self.buf_id, 0, -1, false, {})
   vim.api.nvim_buf_clear_namespace(self.buf_id, self.ext_marks_ns_id, 0, -1)
 
@@ -125,6 +130,10 @@ function Tree:render()
   -- conceal ids at end of the line
   vim.api.nvim_win_call(self.win_id, function()
     vim.fn.matchadd('Conceal', [[\[\d\+\]$]])
+  end)
+
+  vim.schedule(function()
+    self.rendering = false
   end)
 end
 

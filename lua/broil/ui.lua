@@ -47,6 +47,10 @@ ui.create_tree_window = function(dir)
   vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
     buffer = ui.buf_id,
     callback = function()
+      if (ui.tree.rendering) then -- rendering via movements / go into dir etc, should not calculate changes
+        return
+      end
+
       local current_lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
       local edits = {}
 
