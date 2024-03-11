@@ -26,4 +26,10 @@ function utils.get_bid_by_match(line)
   return res
 end
 
+--- remove special meaning from chars in a gsub string. Eg. the dot char.
+--- replaces all non-alphanumeric characters with their escaped versions
+function utils.escape_pattern(text)
+  return text:gsub("([^%w])", "%%%1")
+end
+
 return utils;

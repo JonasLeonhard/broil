@@ -1,6 +1,7 @@
 local BLine = require('broil.bline')
 local config = require('broil.config')
 local fzf = require('fzf_lib')
+local utils = require('broil.utils')
 
 local Tree_Builder = {}
 Tree_Builder.__index = Tree_Builder
@@ -218,8 +219,7 @@ function Tree_Builder:create_bline(parent_bline, name, type)
   end
 
   local path = parent_bline.path .. '/' .. name
-  local relative_path = string.gsub(path, self.path .. '/', '')
-
+  local relative_path = string.gsub(path, utils.escape_pattern(self.path .. '/'), '')
   local score = 10000 - parent_bline.depth + 1 -- // we rank less deep entries higher
   local fzf_score = fzf.get_score(relative_path, self.fzf_pattern_obj, self.fzf_slab)
   local fzf_pos = fzf.get_pos(relative_path, self.fzf_pattern_obj, self.fzf_slab)
