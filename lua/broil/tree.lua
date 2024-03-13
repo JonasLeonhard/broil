@@ -2,6 +2,9 @@ local Tree = {}
 Tree.__index = Tree
 
 local webdevicons = require('nvim-web-devicons')
+local utils = require('broil.utils')
+
+local render_cache = {}
 
 --- @param options broil.TreeOptions
 function Tree:new(options)
@@ -20,19 +23,15 @@ function Tree:new(options)
   tree.conceal_marks_ns_id = vim.api.nvim_create_namespace('BroilConcealMarks')
   tree.highlight_ns_id = vim.api.nvim_create_namespace('BroilTreeHighlights')
 
-  -- internal state
-  tree.rendering = false
-
   return tree
 end
 
 function Tree:render()
-  self.rendering = true
-
   vim.api.nvim_buf_set_lines(self.buf_id, 0, -1, false, {})
   vim.api.nvim_buf_clear_namespace(self.buf_id, self.ext_marks_ns_id, 0, -1)
 
   for index, bline in ipairs(self.lines) do
+    render_cache[tostring(bline.id)] = bline
     local rendered_line = self:render_name(bline)
 
     -- Remove newline characters from the rendered_line
@@ -128,13 +127,11 @@ function Tree:render()
   end
 
   -- conceal ids at end of the line
-  vim.api.nvim_win_call(self.win_id, function()
-    vim.fn.matchadd('Conceal', [[\[\d\+\]$]])
-  end)
-
-  vim.schedule(function()
-    self.rendering = false
-  end)
+  if (self.win_id) then
+    vim.api.nvim_win_call(self.win_id, function()
+      vim.fn.matchadd('Conceal', [[\[\d\+\]$]])
+    end)
+  end
 end
 
 function Tree:render_name(bline)
@@ -283,14 +280,31 @@ function Tree:find_by_id(bid)
     return nil
   end
 
-  local bline = nil
-  for _, tree_bline in ipairs(self.lines) do
-    if (tree_bline.id == bid) then
-      bline = tree_bline
-      break
+  return render_cache[tostring(bid)]
+end
+
+--- remove the dirs children recursively if we can find them
+--- @param children_to_remove broil.BId[]
+function Tree:remove_children(children_to_remove)
+  local current_lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
+  local removed_children = {}
+
+  for child_idx, line in ipairs(current_lines) do
+    local path_id = utils.get_bid_by_match(line)
+    local child_bline = self:find_by_id(path_id)
+
+    if child_bline and vim.tbl_contains(children_to_remove, child_bline.id) and not vim.tbl_contains(removed_children, child_bline.id) then
+      vim.api.nvim_buf_set_lines(self.buf_id, child_idx - 1, child_idx, false, {})
+      table.insert(removed_children, child_bline.id)
+
+      if child_bline.children then
+        self:remove_children(child_bline.children) -- recursively remove children
+      end
     end
   end
-  return bline
+
+  -- Update current_lines to reflect the removal
+  current_lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
 end
 
 return Tree

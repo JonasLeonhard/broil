@@ -4,7 +4,7 @@ local config = {
     help = '?',
     synchronize = '<C-y>',
     close = '<C-q>',
-    pop_history = '<ESC>',
+    pop_history = '<C-p>',
 
     -- search
     select_next_node = '<C-j>',

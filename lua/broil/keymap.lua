@@ -25,8 +25,8 @@ keymap.attach = function()
     { desc = 'Select next node' })
   keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.select_prev_node, ui.select_prev_node,
     { desc = 'Select next node' })
-  keymap.map(ui.search_buf_id, { 'n' }, '<C-d>', ui.scroll_down)
-  keymap.map(ui.search_buf_id, { 'n' }, '<C-u>', ui.scroll_up)
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, '<C-d>', ui.scroll_down)
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, '<C-u>', ui.scroll_up)
   keymap.map(ui.search_buf_id, { 'n' }, 'gg', ui.scroll_top_node)
   keymap.map(ui.search_buf_id, { 'n' }, 'G', ui.scroll_end)
 

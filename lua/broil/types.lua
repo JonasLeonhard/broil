@@ -35,3 +35,7 @@
 --- @field bid broil.BId|nil -- bline id the edit was made on
 --- @field path_from string -- path of what was edited
 --- @field path_to string|nil -- path of where it is edited to
+
+--- @class broil.Editor
+--- @field edits broil.Edit[]
+--- @field build_current_edits function -- build editor.edits from the tree

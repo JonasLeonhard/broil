@@ -1,3 +1,9 @@
+local Tree_Builder = require('broil.tree_builder')
+local Tree = require('broil.tree')
+local fs = require('broil.fs')
+local utils = require('broil.utils')
+local Editor = require('broil.editor')
+
 local ui = {
   -- #State
   mode = "tree", -- tree or buffer
@@ -10,17 +16,13 @@ local ui = {
   -- #Search
   search_win_id = nil,
   search_win = {
-    height = 1,     -- 1line height
+    height = 1,      -- 1line height
   },
-  search_term = "", -- current search filter,
+  search_term = "",  -- current search filter,
   open_path = nil,
-  open_history = {} -- we can reset to this later
+  open_history = {}, -- we can reset to this later
+  editor = Editor:new(),
 }
-
-local Tree_Builder = require('broil.tree_builder')
-local Tree = require('broil.tree')
-local fs = require('broil.fs')
-local utils = require('broil.utils')
 
 --- scan the file system at dir and create a tree view for the buffer
 --- @param dir string root directory to create nodes from
@@ -47,57 +49,8 @@ ui.create_tree_window = function(dir)
   vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
     buffer = ui.buf_id,
     callback = function()
-      if (ui.tree.rendering) then -- rendering via movements / go into dir etc, should not calculate changes
-        return
-      end
-
-      local current_lines = vim.api.nvim_buf_get_lines(ui.buf_id, 0, -1, false)
-      local edits = {}
-
-      -- build line_changes and new lines
-      for index, line in ipairs(current_lines) do
-        local path_id = utils.get_bid_by_match(line)
-        local bline = ui.tree:find_by_id(path_id)
-
-        local path_from = nil
-        local path_to = nil
-
-        if (bline) then
-          -- we edited a line with a blineid
-          path_from = bline.path
-
-          local path_head = vim.fn.fnamemodify(bline.path, ':h') or ''
-          -- remove leading whitespace before first char, remove path_id from the end, remove relative path
-          local edited_line = line:gsub("^%s*", ""):gsub("%[%d+%]$", "")
-          local edited_line_name = vim.fn.fnamemodify(edited_line, ':t')
-
-          if (edited_line_name ~= "") then
-            path_to = path_head .. '/' .. edited_line_name
-          end
-        else
-          -- we edited a line without a blineid
-          --
-          -- we probably want to get the path by iterating backwards from this line in the tree, until we hit a line with a parsable bid?
-          -- path_to = '/new/path'
-        end
-
-        if (path_from ~= path_to) then
-          local id = ('New:' .. index)
-          if (path_id) then
-            id = ('Bline:' .. path_id)
-          end
-          edits[id] = {
-            path_from = path_from,
-            path_to = path_to,
-          }
-        end
-        -- if (bline)then
-        -- the
-        -- local path_to = vim.fn.fnamemodify(bline.path, ':t')
-        --     print("bline with id:", bline)
-      end
-
-      print("edits", vim.inspect(edits))
+      print("tree rendering...", vim.inspect(ui.tree.rendering))
+      ui.editor:build_current_edits(ui.tree)
     end
   })
 end
