@@ -286,25 +286,35 @@ end
 --- remove the dirs children recursively if we can find them
 --- @param children_to_remove broil.BId[]
 function Tree:remove_children(children_to_remove)
-  local current_lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
-  local removed_children = {}
-
-  for child_idx, line in ipairs(current_lines) do
-    local path_id = utils.get_bid_by_match(line)
-    local child_bline = self:find_by_id(path_id)
-
-    if child_bline and vim.tbl_contains(children_to_remove, child_bline.id) and not vim.tbl_contains(removed_children, child_bline.id) then
-      vim.api.nvim_buf_set_lines(self.buf_id, child_idx - 1, child_idx, false, {})
-      table.insert(removed_children, child_bline.id)
-
-      if child_bline.children then
-        self:remove_children(child_bline.children) -- recursively remove children
+  local removal_queue = {}
+  local fill_removal_queue
+  fill_removal_queue = function(subchildren_to_remove)
+    for _, child_id in ipairs(subchildren_to_remove) do
+      local child_bline = self:find_by_id(child_id)
+      if child_bline then
+        table.insert(removal_queue, child_bline.id)
+        if child_bline.children then
+          fill_removal_queue(child_bline.children)
+        end
       end
     end
   end
 
-  -- Update current_lines to reflect the removal
-  current_lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
+  fill_removal_queue(children_to_remove)
+
+  -- Remove lines in reverse order to avoid changing indices of yet-to-be-removed lines
+  local current_lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
+  while #removal_queue > 0 do
+    local path_id = table.remove(removal_queue)
+    for i = #current_lines, 1, -1 do
+      local line = current_lines[i]
+      local line_path_id = utils.get_bid_by_match(line)
+      if line_path_id == path_id then
+        vim.api.nvim_buf_set_lines(self.buf_id, i - 1, i, false, {})
+        table.remove(current_lines, i)
+      end
+    end
+  end
 end
 
 return Tree
