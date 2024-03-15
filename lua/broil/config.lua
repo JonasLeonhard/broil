@@ -30,10 +30,10 @@ local config = {
   },
 
   -- runtime configs
-  fzf_case_mode = 0,            -- case_mode: number with 0 = smart_case, 1 = ignore_case, 2 = respect_case
+  fzf_case_mode = 0,             -- case_mode: number with 0 = smart_case, 1 = ignore_case, 2 = respect_case
   fzf_fuzzy_match = true,
-  show_hidden = true,           -- files/dirs with '.'
-  sort_option = 'TypeDirsFirst' -- or 'TypeDirsLast'
+  show_hidden = true,            -- files/dirs with '.'
+  sort_option = 'TypeDirsFirst', -- or 'TypeDirsLast'
 }
 
 --- @param opts table|nil configuration See |broil.config|.

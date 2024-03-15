@@ -10,19 +10,33 @@ function Editor:new()
 
   self.edits = {}         -- global edits stored between rerenders
   self.current_edits = {} -- edits local to a displayed tree, recalculated after each rerender
-
+  self.removed_extmarks = {}
+  self.edit_marks = {}    -- bid -> mark_id
+  self.highlight_ns_id = vim.api.nvim_create_namespace('BroilEditHighlights')
+  self.delete_ns_id = vim.api.nvim_create_namespace('BroilDeleteHighlights')
+  self.deletion_count = 0
   return editor
 end
 
-function Editor:build_current_edits(tree)
+function Editor:handle_edits(tree)
   self.current_edits = {}
+  vim.api.nvim_buf_clear_namespace(tree.buf_id, self.delete_ns_id, 0, -1)
+  vim.api.nvim_buf_clear_namespace(tree.buf_id, self.highlight_ns_id, 0, -1)
+  self.deletion_count = 0
+
   for _, bline in ipairs(tree.lines) do
-    self:build_deleted(bline, tree)
+    self:build_deleted_and_remove_children(bline, tree)
   end
 
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
   for index, line in ipairs(current_lines) do
+    self:remove_line_extmarks_if_edited(index, line, tree)
+    self:highlight_new_and_modified(index, line, tree)
     self:build_new_and_edited(index, line, current_lines, tree)
+  end
+
+  for index, bline in ipairs(tree.lines) do
+    self:highlight_deleted(index, bline, current_lines, tree)
   end
 end
 
@@ -92,7 +106,7 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
   ::continue::
 end
 
-function Editor:build_deleted(bline, tree)
+function Editor:build_deleted_and_remove_children(bline, tree)
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
   -- check if a line with the bid exists after editing
   local current_line_exists = false
@@ -114,6 +128,105 @@ function Editor:build_deleted(bline, tree)
       path_from = bline.path,
       path_to = nil,
     }
+  end
+end
+
+function Editor:remove_line_extmarks_if_edited(index, line, tree)
+  if (line == nil or line == '') then
+    return
+  end
+  local path_id = utils.get_bid_by_match(line)
+  local bline = tree:find_by_id(path_id)
+
+  if (bline == nil) then
+    return
+  end
+
+  if (bline.rendered ~= line) then
+    -- edited the line -> remove the extmarks on the line
+    local line_marks = vim.api.nvim_buf_get_extmarks(tree.buf_id, tree.ext_marks_ns_id, { index - 1, 0 },
+      { index - 1, -1 }, {})
+
+    for _, mark in ipairs(line_marks) do
+      self.removed_extmarks[tostring(bline.id)] = mark
+      vim.api.nvim_buf_del_extmark(tree.buf_id, tree.ext_marks_ns_id, mark[1])
+    end
+  else
+    -- line in original state -> restore the extmarks on the line that where previously removed
+    local removed_mark = self.removed_extmarks[tostring(bline.id)]
+    if (removed_mark ~= nil) then
+      vim.api.nvim_buf_set_extmark(tree.buf_id, tree.ext_marks_ns_id, index - 1, 0, bline.extmark)
+      self.removed_extmarks[tostring(bline.id)] = nil
+    end
+  end
+end
+
+function Editor:highlight_new_and_modified(index, line, tree)
+  if (line == nil or line == '') then
+    return
+  end
+
+  local path_id = utils.get_bid_by_match(line)
+  local bline = tree:find_by_id(path_id)
+
+  if (bline) then
+    local edited = bline.rendered ~= line
+
+    if (edited) then
+      if (path_id == 1) then
+        print("show edits of", index, line)
+      end
+      -- highlight the line as edited
+      vim.api.nvim_command('highlight BroilEdited guifg=#f9e2af')
+      -- vim.api.nvim_buf_add_highlight(tree.buf_id, self.highlight_ns_id, 'BroilEdited', index - 1, 0, -1)
+      vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
+        sign_text = '│',
+        sign_hl_group = 'BroilEdited',
+        invalidate = true
+      })
+    else
+      if (path_id == 1) then
+        print("clear edits of", index, line)
+      end
+      -- remove the highlight
+      vim.api.nvim_buf_clear_namespace(tree.buf_id, self.highlight_ns_id, index, index + 1)
+    end
+  else
+    vim.api.nvim_command('highlight BroilAdded guifg=#a6e3a1')
+    vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
+      sign_text = '│',
+      sign_hl_group = 'BroilAdded',
+      invalidate = true
+    })
+  end
+end
+
+function Editor:highlight_deleted(index, bline, current_lines, tree)
+  -- check if a line with the bid exists after editing
+  local current_line_exists = false
+  for _, line in ipairs(current_lines) do
+    local path_id = utils.get_bid_by_match(line)
+    if (path_id == bline.id) then
+      current_line_exists = true
+      break
+    end
+  end
+
+  -- if not, we deleted it
+  if (not current_line_exists) then
+    vim.api.nvim_command('highlight BroilDeleted guifg=#f38ba8')
+    local line_ext_marks = vim.api.nvim_buf_get_extmarks(tree.buf_id, self.delete_ns_id, { index - 2, 0 },
+      { index - 1, -1 }, {})
+
+    if (#line_ext_marks == 0) then
+      vim.api.nvim_buf_set_extmark(tree.buf_id, self.delete_ns_id, index - 1 - self.deletion_count, 0, {
+        sign_text = '▔',
+        sign_hl_group = 'BroilDeleted',
+        invalidate = true
+      })
+    end
+
+    self.deletion_count = self.deletion_count + 1
   end
 end
 

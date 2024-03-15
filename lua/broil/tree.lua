@@ -50,48 +50,22 @@ function Tree:render()
     local indent = string.rep(' ', tree_lines_length) .. string.rep(' ', file_icon_length)
     rendered_line = indent .. rendered_line
 
+    -- bline render info
+    bline.rendered = rendered_line
+    bline.extmark = {
+      virt_text = { { tree_lines, 'BroilTreeLines' }, { file_icon, 'BroilTreeIcons_' .. file_extension } },
+      virt_text_pos = 'overlay',
+      invalidate = true,
+    }
+
     -- Render the line
     vim.api.nvim_buf_set_lines(self.buf_id, index - 1, index - 1, false, { rendered_line })
 
     -- Render TreeLines
-    local mark_id = vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0,
-      {
-        virt_text = { { tree_lines, 'BroilTreeLines' }, { file_icon, 'BroilTreeIcons_' .. file_extension } },
-        virt_text_pos = 'overlay',
-        invalidate = true,
-      })
+    vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0, bline.extmark)
 
     -- Render File Icons
     vim.api.nvim_command('highlight BroilTreeIcons_' .. file_extension .. ' guifg=' .. color) -- highlight Icon in color
-
-    -- remove rendered marks on changes
-    vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
-      buffer = self.buf_id,
-      callback = function()
-        local mark_pos = vim.api.nvim_buf_get_extmark_by_id(self.buf_id, self.ext_marks_ns_id, mark_id,
-          { details = true })
-        if (not mark_pos[1] and not mark_pos[2]) then
-          return
-        end
-        local marks_of_line = vim.api.nvim_buf_get_extmarks(self.buf_id, self.ext_marks_ns_id, { mark_pos[1], 0 },
-          { mark_pos[1], -1 }, {})
-
-        -- delete all marks but the first if multiple are in one line
-        if #marks_of_line > 1 then
-          for i = 2, #marks_of_line do
-            vim.api.nvim_buf_del_extmark(self.buf_id, self.ext_marks_ns_id, marks_of_line[i][1])
-          end
-        end
-
-        -- delete marks in lines without indentation
-        local mark_line = vim.api.nvim_buf_get_lines(self.buf_id, mark_pos[1], mark_pos[1] + 1, false)
-        local mark_line_has_indent_inside = vim.fn.match(mark_line[1], indent) > -1
-
-        if (not mark_line_has_indent_inside) then
-          vim.api.nvim_buf_del_extmark(self.buf_id, self.ext_marks_ns_id, mark_id)
-        end
-      end
-    })
 
     -- Render Icon highlights
     if (bline.file_type == 'directory') then

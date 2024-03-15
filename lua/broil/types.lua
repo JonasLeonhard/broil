@@ -23,6 +23,8 @@
 --- @field fzf_pos table positions that matched the search term chars, eg: {1, 3, 4}
 --- @field nb_kept_children integer used during the trimming step
 --- @field read_dir function|nil -> @return broil.ReadDir[]
+--- @field rendered string|nil -> how the bline was rendered originally, can be used to detect if changes are made
+--- @field extmark table|nil -> set_extmarks opts
 
 --- @class broil.TreeOptions
 --- @field pattern string
@@ -39,6 +41,6 @@
 
 --- @class broil.Editor
 --- @field edits broil.Edit[]
---- @field build_current_edits function -- build editor.edits from the tree
+--- @field handle_edits function
 --- @field current_edits broil.Edit[]
 --- @field building boolean wheter we are currently building edits

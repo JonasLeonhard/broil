@@ -31,6 +31,9 @@ ui.create_tree_window = function(dir)
   ui.buf_id = vim.api.nvim_create_buf(false, true)
   vim.b[ui.buf_id].modifiable = true
   vim.wo.signcolumn = 'yes'
+  vim.api.nvim_set_option_value('tabstop', 3, { buf = ui.buf_id })
+  vim.api.nvim_set_option_value('shiftwidth', 3, { buf = ui.buf_id })
+  vim.api.nvim_set_option_value('expandtab', true, { buf = ui.buf_id })
 
   -- 2. create a new tree buffer window
   if (ui.win_id ~= nil) then
@@ -50,7 +53,7 @@ ui.create_tree_window = function(dir)
     buffer = ui.buf_id,
     callback = function()
       print("build edits...")
-      ui.editor:build_current_edits(ui.tree)
+      ui.editor:handle_edits(ui.tree)
 
       print("edits", vim.inspect(ui.editor.current_edits))
     end
