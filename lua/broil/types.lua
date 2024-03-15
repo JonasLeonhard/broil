@@ -15,6 +15,7 @@
 --- @field name string
 --- @field has_match boolean wheter search pattern matched something
 --- @field file_type broil.FileType
+--- @field line_type string|nil
 --- @field children broil.BId[] sorted and filtered
 --- @field next_child_idx integer index for iteration, among the children
 --- @field score integer composite ordering score, takes in count fzf match, depth ordering...
@@ -39,3 +40,5 @@
 --- @class broil.Editor
 --- @field edits broil.Edit[]
 --- @field build_current_edits function -- build editor.edits from the tree
+--- @field current_edits broil.Edit[]
+--- @field building boolean wheter we are currently building edits

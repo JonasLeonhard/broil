@@ -3,8 +3,7 @@ Tree.__index = Tree
 
 local webdevicons = require('nvim-web-devicons')
 local utils = require('broil.utils')
-
-local render_cache = {}
+local cache = require('broil.cache')
 
 --- @param options broil.TreeOptions
 function Tree:new(options)
@@ -31,7 +30,7 @@ function Tree:render()
   vim.api.nvim_buf_clear_namespace(self.buf_id, self.ext_marks_ns_id, 0, -1)
 
   for index, bline in ipairs(self.lines) do
-    render_cache[tostring(bline.id)] = bline
+    cache.render_cache[tostring(bline.id)] = bline
     local rendered_line = self:render_name(bline)
 
     -- Remove newline characters from the rendered_line
@@ -280,7 +279,7 @@ function Tree:find_by_id(bid)
     return nil
   end
 
-  return render_cache[tostring(bid)]
+  return cache.render_cache[tostring(bid)]
 end
 
 --- remove the dirs children recursively if we can find them

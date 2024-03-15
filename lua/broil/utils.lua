@@ -32,4 +32,8 @@ function utils.escape_pattern(text)
   return text:gsub("([^%w])", "%%%1")
 end
 
+function utils.get_dir_of_file_dir(path)
+  return vim.fn.fnamemodify(path, ':h')
+end
+
 return utils;

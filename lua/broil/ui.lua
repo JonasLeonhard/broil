@@ -49,8 +49,10 @@ ui.create_tree_window = function(dir)
   vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
     buffer = ui.buf_id,
     callback = function()
-      print("tree rendering...", vim.inspect(ui.tree.rendering))
+      print("build edits...")
       ui.editor:build_current_edits(ui.tree)
+
+      print("edits", vim.inspect(ui.editor.current_edits))
     end
   })
 end
