@@ -177,11 +177,10 @@ end
 --- Set the verb in the info bar
 --- @param verb string|nil
 ui.set_verb = function(verb)
-  ui.verb = verb
-
-  if (verb == nil) then
+  local replaced_verb_variables = verb
+  if (replaced_verb_variables == nil) then
     ui.set_info_bar_message()
-  elseif (verb == "") then
+  elseif (replaced_verb_variables == "") then
     ui.set_info_bar_message("Type a " ..
       vim.o.shell .. " command to execute. '@' = 'selection_path', Hit 'enter' to execute it")
   else
@@ -190,24 +189,32 @@ ui.set_verb = function(verb)
 
     local path_id = utils.get_bid_by_match(cursor_line)
     local bline = ui.tree:find_by_id(path_id)
-    local bline_path = bline and bline.path or "unknown_path"
-    local bline_name = bline.name or "unknown_name"
     local root_node = ui.tree.lines[1]
+    local bline_path = bline and bline.path or ""
+    local bline_name = bline and bline.name or ""
 
-    local replaced_verb_variables = verb
+    if (bline_path == "") then
+      bline_path = root_node.path ..
+          '/' ..
+          cursor_line:gsub("^%s*", ""):gsub("%[%d+%]$", "") -- remove leading whitespace and pathid
+    end
+
+    if (bline_name == "") then
+      bline_name = cursor_line:gsub("^%s*", ""):gsub("%[%d+%]$", "") -- remove leading whitespace and pathid
+    end
 
     replaced_verb_variables = replaced_verb_variables:gsub("@", bline_path)
     replaced_verb_variables = replaced_verb_variables:gsub("%^", root_node.path)
     replaced_verb_variables = replaced_verb_variables:gsub("%%", bline_name)
 
-    -- allow :h to be used on paths
-    while replaced_verb_variables:find(bline_path .. ":h") do
-      local bline_path_before = bline_path
-      bline_path = vim.fn.fnamemodify(bline_path, ":h")
-      replaced_verb_variables = replaced_verb_variables:gsub(bline_path_before .. ":h", bline_path)
-    end
+    -- replace the verb path in the actual search buffer
+    vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { ui.search_term .. ':' .. replaced_verb_variables })
+    vim.api.nvim_win_set_cursor(ui.search_win_id, { 1, #ui.search_term + #replaced_verb_variables + 2 })
+
     ui.set_info_bar_message(replaced_verb_variables, 'verb')
   end
+
+  ui.verb = replaced_verb_variables
 end
 
 
@@ -266,7 +273,12 @@ end
 --- Opens the currently selected tree node (Tree.selected_render_index)
 --- It enters the node if its a dir,
 --- otherwise it opens the file in a new buffer
-ui.open_selected_node = function()
+ui.open_selected_node_or_run_verb = function()
+  -- if we have a verb, we execute it instead of opening the node
+  if (ui.verb ~= '') then
+    return ui.run_current_verb()
+  end
+
   local cursor_pos = vim.api.nvim_win_get_cursor(ui.win_id)
   local cursor_y = cursor_pos[1]
 
@@ -289,6 +301,31 @@ ui.open_selected_node = function()
     vim.api.nvim_command('edit ' .. node.path)
     vim.api.nvim_command('stopinsert')
   end
+end
+
+ui.run_current_verb = function()
+  -- open split above ui.win_id
+  -- create a floating terminal window
+  local term_buf_id = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_open_win(term_buf_id, true, {
+    relative = "win",
+    width = vim.o.columns,
+    height = vim.api.nvim_win_get_height(ui.win_id) + vim.api.nvim_win_get_height(ui.search_win_id) + 2,
+    row = 0,
+    col = 0,
+    style = "minimal",
+  })
+  -- run the verb in the terminal
+  vim.api.nvim_command('term ' .. ui.verb)
+
+  -- rerender when the terminal is closed
+  vim.api.nvim_create_autocmd({ "WinClosed" }, {
+    buffer = term_buf_id,
+    callback = function()
+      local win_cursor = vim.api.nvim_win_get_cursor(ui.win_id)
+      ui.render(win_cursor[1])
+    end
+  })
 end
 
 --- Open the parent dir of the currently opened tree_view -> vim.fn.fnamemodify(Tree.root_path, ":h")
@@ -419,7 +456,8 @@ ui.set_search = function(search_term)
   vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { search_term })
 end
 
-ui.render = function()
+--- @param selection_index number|nil line nr to select after the render. If nil, select the highest score
+ui.render = function(selection_index)
   if (not ui.open_path) then
     ui.open_path = fs.get_path_of_current_window_or_nvim_cwd()
   end
@@ -442,7 +480,7 @@ ui.render = function()
     open_path_index = tree_build.open_path_index,
   })
   ui.tree:render()
-  ui.tree:initial_selection()
+  ui.tree:initial_selection(selection_index)
   builder:destroy()
 end
 

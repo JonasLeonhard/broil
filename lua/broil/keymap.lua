@@ -30,12 +30,12 @@ keymap.attach = function()
   keymap.map(ui.search_buf_id, { 'n' }, 'gg', ui.scroll_top_node)
   keymap.map(ui.search_buf_id, { 'n' }, 'G', ui.scroll_end)
 
-  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node, ui.open_selected_node,
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node, ui.open_selected_node_or_run_verb,
     { desc = 'Open selected node' })
 
-  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, ui.open_selected_node,
+  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, ui.open_selected_node_or_run_verb,
     { desc = 'Open selected node' })
-  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, ui.open_selected_node,
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, ui.open_selected_node_or_run_verb,
     { desc = 'Open selected node' })
 
   keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_parent_dir, ui.open_parent_dir,

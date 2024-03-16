@@ -227,8 +227,14 @@ function Tree:draw_line_extmarks(index, line, current_lines)
   self.mark_virt_text[index] = tree_lines .. icon
 end
 
-function Tree:initial_selection()
+--- @param selection_index number|nil the inistal index to select. Nil = select the highest score
+function Tree:initial_selection(selection_index)
   vim.schedule(function()
+    if (selection_index) then
+      vim.api.nvim_win_set_cursor(self.win_id, { selection_index, 0 })
+      return
+    end
+
     if (self.pattern ~= '') then
       vim.api.nvim_win_set_cursor(self.win_id, { self.highest_score_index, 0 })
     else -- open the path
