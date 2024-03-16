@@ -191,7 +191,7 @@ ui.set_verb = function(verb)
     ui.set_info_bar_message("Type a " ..
       vim.o.shell ..
       " command to execute. 󰋗 :'%<space>' = 'selection_path', '%n' = 'selection_name', '.<space>' = 'view_path', Hit 'enter' to execute it")
-  else
+  elseif (replaced_verb_variables:find("%% ") or replaced_verb_variables:find("%. ") or replaced_verb_variables:find("%%n")) then
     local tree_cursor = vim.api.nvim_win_get_cursor(ui.win_id)
     local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, tree_cursor[1] - 1, tree_cursor[1], false)[1]
 
