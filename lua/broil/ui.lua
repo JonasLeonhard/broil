@@ -15,10 +15,10 @@ local ui = {
   },
   -- #Search
   search_win_id = nil,
-  search_win = {
-    height = 1,      -- 1line height
-  },
-  search_term = "",  -- current search filter,
+  search_term = "", -- current search filter,
+  info_buf_id = nil,
+  info_buf_default_msg = "Hit 'enter' to focus, '?' for help, or  ':<verb>' to execute a command",
+  info_highlight_ns_id = vim.api.nvim_create_namespace('BroilInfoHighlights'),
   open_path = nil,
   open_history = {}, -- we can reset to this later
   editor = Editor:new(),
@@ -63,7 +63,6 @@ end
 ui.create_search_window = function()
   -- Create a buffer for the search window
   ui.search_buf_id = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_option(ui.search_buf_id, 'textwidth', ui.search_win.width)
 
   -- If a search window already exists, close it
   if (ui.search_win_id ~= nil) then
@@ -71,7 +70,7 @@ ui.create_search_window = function()
   end
 
   -- Create a split window with a specific height for the search window
-  vim.api.nvim_command(ui.search_win.height .. 'split')
+  vim.api.nvim_command(1 .. 'split')
   ui.search_win_id = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(ui.search_win_id, ui.search_buf_id)
 
@@ -89,18 +88,126 @@ ui.create_search_window = function()
   vim.api.nvim_command('setlocal norelativenumber')
 end
 
+--- create the info bar at the top
+ui.create_info_bar_window = function()
+  ui.info_buf_id = vim.api.nvim_create_buf(false, true)
+
+  local opts = {
+    style = "minimal",
+    relative = "win",
+    win = ui.win_id,
+    width = vim.o.columns,
+    height = 1,
+    row = vim.api.nvim_win_get_height(ui.win_id) - 2,
+    col = 0,
+  }
+
+  ui.set_info_bar_message()
+  ui.info_win_id = vim.api.nvim_open_win(ui.info_buf_id, false, opts)
+end
+
+--- @param msg string|nil
+--- @param type 'verb'|nil
+--- highlights everything in '' quotes
+ui.set_info_bar_message = function(msg, type)
+  if (not msg) then
+    msg = ui.info_buf_default_msg
+  end
+
+  -- highlight everything in '' quotes
+  vim.api.nvim_command('highlight BroilHelpCommand guifg=#b4befe')
+  vim.api.nvim_command('syntax match BroilHelpCommand /\'[^\']*\'/')
+
+  -- Set the buffer lines
+  local icon = ' 󰙎 - ';
+  if (type == 'verb') then
+    icon = '  - ';
+  end
+  vim.api.nvim_buf_set_lines(ui.info_buf_id, 0, -1, false, { icon .. msg })
+
+  -- Find and highlight each quoted string
+  local start_pos = 1
+  while true do
+    -- Find the next quoted string
+    local start_quote, end_quote = string.find(msg, "'[^']*'", start_pos)
+
+    -- If no more quoted strings were found, break the loop
+    if not start_quote then break end
+
+    -- Adjust the positions for the prefix and the quotes themselves
+    local highlight_start = start_quote + 8 -- 7 for ' 󰙎 - ' and 1 for the quote
+    local highlight_end = end_quote + 8 - 1 -- 7 for ' 󰙎 - ' and -1 because the end position is inclusive
+
+    -- Add the highlight
+    vim.api.nvim_buf_add_highlight(ui.info_buf_id, -1, 'BroilHelpCommand', 0, highlight_start, highlight_end)
+
+    -- Move to the next position
+    start_pos = end_quote + 1
+  end
+end
+
 --- Attaches Event Listener that gets called when the search input is changed
 ui.on_search_input_listener = function()
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
     buffer = ui.search_buf_id,
     callback = function()
-      ui.search_term = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
+      local previous_search_term = ui.search_term
+      local search_buf_text = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
 
-      utils.debounce(function()
-        ui.render()
-      end, 100)()
+      -- split the search buf text at the first ':'colon
+      local colon_pos = string.find(search_buf_text, ":")
+
+      if colon_pos then
+        ui.search_term = string.sub(search_buf_text, 1, colon_pos - 1)
+        ui.set_verb(string.sub(search_buf_text, colon_pos + 1))
+      else
+        ui.search_term = search_buf_text
+        ui.set_verb()
+      end
+
+      if (previous_search_term ~= ui.search_term) then
+        utils.debounce(function()
+          ui.render()
+        end, 100)()
+      end
     end
   })
+end
+
+--- Set the verb in the info bar
+--- @param verb string|nil
+ui.set_verb = function(verb)
+  ui.verb = verb
+
+  if (verb == nil) then
+    ui.set_info_bar_message()
+  elseif (verb == "") then
+    ui.set_info_bar_message("Type a " ..
+      vim.o.shell .. " command to execute. '@' = 'selection_path', Hit 'enter' to execute it")
+  else
+    local tree_cursor = vim.api.nvim_win_get_cursor(ui.win_id)
+    local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, tree_cursor[1] - 1, tree_cursor[1], false)[1]
+
+    local path_id = utils.get_bid_by_match(cursor_line)
+    local bline = ui.tree:find_by_id(path_id)
+    local bline_path = bline and bline.path or "unknown_path"
+    local bline_name = bline.name or "unknown_name"
+    local root_node = ui.tree.lines[1]
+
+    local replaced_verb_variables = verb
+
+    replaced_verb_variables = replaced_verb_variables:gsub("@", bline_path)
+    replaced_verb_variables = replaced_verb_variables:gsub("%^", root_node.path)
+    replaced_verb_variables = replaced_verb_variables:gsub("%%", bline_name)
+
+    -- allow :h to be used on paths
+    while replaced_verb_variables:find(bline_path .. ":h") do
+      local bline_path_before = bline_path
+      bline_path = vim.fn.fnamemodify(bline_path, ":h")
+      replaced_verb_variables = replaced_verb_variables:gsub(bline_path_before .. ":h", bline_path)
+    end
+    ui.set_info_bar_message(replaced_verb_variables, 'verb')
+  end
 end
 
 
@@ -208,15 +315,22 @@ end
 ui.open = function()
   -- 1. create a search prompt at the bottom
   ui.create_tree_window(fs.get_path_of_current_window_or_nvim_cwd())
+  ui.create_info_bar_window()
   ui.create_search_window()
+
+  -- focus the search window
+  vim.api.nvim_set_current_win(ui.search_win_id)
 
 
   -- 4. attach event listeners
   ui.on_search_input_listener()
   ui.on_yank()
+  ui.on_close_listener()
 
   local keymap = require('broil.keymap')
   keymap.attach();
+
+  ui.render()
 end
 
 ui.close = function()
@@ -229,7 +343,34 @@ ui.close = function()
     vim.api.nvim_win_close(ui.search_win_id, true)
     ui.search_win_id = nil
   end
+
+  if (ui.info_win_id ~= nil) then
+    vim.api.nvim_win_close(ui.info_win_id, true)
+    ui.info_win_id = nil
+  end
+
   vim.api.nvim_command('stopinsert')
+end
+
+ui.on_close_listener = function()
+  vim.api.nvim_create_autocmd({ "WinClosed" }, {
+    buffer = ui.buf_id,
+    callback = function()
+      ui.close()
+    end
+  })
+  vim.api.nvim_create_autocmd({ "WinClosed" }, {
+    buffer = ui.info_buf_id,
+    callback = function()
+      ui.close()
+    end
+  })
+  vim.api.nvim_create_autocmd({ "WinClosed" }, {
+    buffer = ui.search_buf_id,
+    callback = function()
+      ui.close()
+    end
+  })
 end
 
 ui.pop_history = function()
