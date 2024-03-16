@@ -119,9 +119,9 @@ ui.set_info_bar_message = function(msg, type)
   vim.api.nvim_command('syntax match BroilHelpCommand /\'[^\']*\'/')
 
   -- Set the buffer lines
-  local icon = ' 󰙎 - ';
+  local icon = ' 󰙎 ';
   if (type == 'verb') then
-    icon = '  - ';
+    icon = '   ';
   end
   vim.api.nvim_buf_set_lines(ui.info_buf_id, 0, -1, false, { icon .. msg })
 
@@ -135,8 +135,8 @@ ui.set_info_bar_message = function(msg, type)
     if not start_quote then break end
 
     -- Adjust the positions for the prefix and the quotes themselves
-    local highlight_start = start_quote + 8 -- 7 for ' 󰙎 - ' and 1 for the quote
-    local highlight_end = end_quote + 8 - 1 -- 7 for ' 󰙎 - ' and -1 because the end position is inclusive
+    local highlight_start = start_quote + 7 -- 7 for ' 󰙎 - ' and 1 for the quote
+    local highlight_end = end_quote + 7 - 1 -- 7 for ' 󰙎 - ' and -1 because the end position is inclusive
 
     -- Add the highlight
     vim.api.nvim_buf_add_highlight(ui.info_buf_id, -1, 'BroilHelpCommand', 0, highlight_start, highlight_end)
@@ -203,9 +203,9 @@ ui.set_verb = function(verb)
       bline_name = cursor_line:gsub("^%s*", ""):gsub("%[%d+%]$", "") -- remove leading whitespace and pathid
     end
 
-    replaced_verb_variables = replaced_verb_variables:gsub("@", bline_path)
-    replaced_verb_variables = replaced_verb_variables:gsub("%^", root_node.path)
-    replaced_verb_variables = replaced_verb_variables:gsub("%%", bline_name)
+    replaced_verb_variables = replaced_verb_variables:gsub("%% ", bline_path)
+    replaced_verb_variables = replaced_verb_variables:gsub("%. ", root_node.path)
+    replaced_verb_variables = replaced_verb_variables:gsub("%%n ", bline_name)
 
     -- replace the verb path in the actual search buffer
     vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { ui.search_term .. ':' .. replaced_verb_variables })
@@ -275,7 +275,7 @@ end
 --- otherwise it opens the file in a new buffer
 ui.open_selected_node_or_run_verb = function()
   -- if we have a verb, we execute it instead of opening the node
-  if (ui.verb ~= '') then
+  if (ui.verb ~= nil and ui.verb ~= '') then
     return ui.run_current_verb()
   end
 
