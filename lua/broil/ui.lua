@@ -186,12 +186,15 @@ end
 ui.set_verb = function(verb)
   local replaced_verb_variables = verb
   if (replaced_verb_variables == nil) then
-    ui.set_info_bar_message()
+    return ui.set_info_bar_message()
   elseif (replaced_verb_variables == "") then
-    ui.set_info_bar_message("Type a " ..
+    return ui.set_info_bar_message("Type a " ..
       vim.o.shell ..
-      " command to execute. 󰋗 :'%<space>' = 'selection_path', '%n' = 'selection_name', '.<space>' = 'view_path', Hit 'enter' to execute it")
-  elseif (replaced_verb_variables:find("%% ") or replaced_verb_variables:find("%. ") or replaced_verb_variables:find("%%n")) then
+      " command to execute. 󰋗 :['%<space>' = 'selection_path', '%n' = 'selection_name', '.<space>' = 'view_path'], Hit 'enter' to execute it",
+      "verb")
+  end
+
+  if (replaced_verb_variables:find("%% ") or replaced_verb_variables:find("%. ") or replaced_verb_variables:find("%%n")) then
     local tree_cursor = vim.api.nvim_win_get_cursor(ui.win_id)
     local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, tree_cursor[1] - 1, tree_cursor[1], false)[1]
 
@@ -218,11 +221,11 @@ ui.set_verb = function(verb)
     -- replace the verb path in the actual search buffer
     vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { ui.search_term .. ':' .. replaced_verb_variables })
     vim.api.nvim_win_set_cursor(ui.search_win_id, { 1, #ui.search_term + #replaced_verb_variables + 2 })
-
-    ui.set_info_bar_message("Run: " .. "'" .. replaced_verb_variables ..
-      "' 󰋗 :'%<space>' = 'selection_path', '%n' = 'selection_name', '.<space>' = 'view_path', Hit 'enter' to execute it")
   end
 
+  ui.set_info_bar_message("Hit 'enter' to execute: " .. "'" .. replaced_verb_variables ..
+    "' 󰋗 : ['%<space>', '%n', '.<space>']",
+    "verb")
   ui.verb = replaced_verb_variables
 end
 
