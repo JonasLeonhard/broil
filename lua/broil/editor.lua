@@ -8,10 +8,7 @@ function Editor:new()
   local editor = {}
   setmetatable(editor, Editor)
 
-  self.edits = {}         -- global edits stored between rerenders
   self.current_edits = {} -- edits local to a displayed tree, recalculated after each rerender
-  self.removed_extmarks = {}
-  self.edit_marks = {}    -- bid -> mark_id
   self.highlight_ns_id = vim.api.nvim_create_namespace('BroilEditHighlights')
   self.delete_ns_id = vim.api.nvim_create_namespace('BroilDeleteHighlights')
   self.deletion_count = 0
@@ -30,7 +27,7 @@ function Editor:handle_edits(tree)
 
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
   for index, line in ipairs(current_lines) do
-    self:remove_line_extmarks_if_edited(index, line, tree)
+    tree:draw_line_extmarks(index, line, current_lines)
     self:highlight_new_and_modified(index, line, tree)
     self:build_new_and_edited(index, line, current_lines, tree)
   end
@@ -131,36 +128,6 @@ function Editor:build_deleted_and_remove_children(bline, tree)
   end
 end
 
-function Editor:remove_line_extmarks_if_edited(index, line, tree)
-  if (line == nil or line == '') then
-    return
-  end
-  local path_id = utils.get_bid_by_match(line)
-  local bline = tree:find_by_id(path_id)
-
-  if (bline == nil) then
-    return
-  end
-
-  if (bline.rendered ~= line) then
-    -- edited the line -> remove the extmarks on the line
-    local line_marks = vim.api.nvim_buf_get_extmarks(tree.buf_id, tree.ext_marks_ns_id, { index - 1, 0 },
-      { index - 1, -1 }, {})
-
-    for _, mark in ipairs(line_marks) do
-      self.removed_extmarks[tostring(bline.id)] = mark
-      vim.api.nvim_buf_del_extmark(tree.buf_id, tree.ext_marks_ns_id, mark[1])
-    end
-  else
-    -- line in original state -> restore the extmarks on the line that where previously removed
-    local removed_mark = self.removed_extmarks[tostring(bline.id)]
-    if (removed_mark ~= nil) then
-      vim.api.nvim_buf_set_extmark(tree.buf_id, tree.ext_marks_ns_id, index - 1, 0, bline.extmark)
-      self.removed_extmarks[tostring(bline.id)] = nil
-    end
-  end
-end
-
 function Editor:highlight_new_and_modified(index, line, tree)
   if (line == nil or line == '') then
     return
@@ -173,14 +140,11 @@ function Editor:highlight_new_and_modified(index, line, tree)
     local edited = bline.rendered ~= line
 
     if (edited) then
-      if (path_id == 1) then
-        print("show edits of", index, line)
-      end
       -- highlight the line as edited
       vim.api.nvim_command('highlight BroilEdited guifg=#f9e2af')
       -- vim.api.nvim_buf_add_highlight(tree.buf_id, self.highlight_ns_id, 'BroilEdited', index - 1, 0, -1)
       vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
-        sign_text = '│',
+        sign_text = '┃',
         sign_hl_group = 'BroilEdited',
         invalidate = true
       })
@@ -194,7 +158,7 @@ function Editor:highlight_new_and_modified(index, line, tree)
   else
     vim.api.nvim_command('highlight BroilAdded guifg=#a6e3a1')
     vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
-      sign_text = '│',
+      sign_text = '┃',
       sign_hl_group = 'BroilAdded',
       invalidate = true
     })

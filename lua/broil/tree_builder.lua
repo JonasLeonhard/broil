@@ -41,7 +41,6 @@ function Tree_Builder:new(path, options)
     fzf_pos = {},
     nb_kept_children = 0, -- todo? amount of kept children
     next_child_idx = 1,   -- this is used for building the tree only. It keeps track of the node from wich to continue building the tree after touching the current dir.
-    left_branches = {},   -- table<depth, boolean>: depths where the branch has a left branch
     unlisted = 0,         -- amount of unlisted children. This will be set later
   })
   tree_builder.root_id = bline.id
@@ -247,7 +246,6 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     fzf_score = fzf_score or 0,
     fzf_pos = fzf_pos or {},
     nb_kept_children = 0,
-    left_branches = {},
     unlisted = 0
   })
 end
@@ -333,7 +331,6 @@ function Tree_Builder:as_tree(bline_ids)
 
   -- iterate the tree_lines from bottom to top, skip the root node at index 1
   -- get the parent line and create a range from the parent to the current_line. start => parent_index + 1, and end => current_index
-  -- set the left_branches of all lines in the range to the depth
   local last_parent_index = #tree_lines
   for end_index = #tree_lines, 1, -1 do
     -- find the parent_index of the line by iterating from the line index upwards until you get the parent
@@ -361,12 +358,6 @@ function Tree_Builder:as_tree(bline_ids)
         tree_lines[parent_index].unlisted = 0
       end
       last_parent_index = parent_index
-    end
-
-    -- set all branches in from this line to the parent as a left branch
-    local parent_depth = tree_lines[parent_index].depth
-    for i = parent_index + 1, end_index do
-      tree_lines[i].left_branches[tostring(parent_depth)] = true
     end
   end
 
