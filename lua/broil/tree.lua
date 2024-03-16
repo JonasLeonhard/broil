@@ -150,8 +150,9 @@ function Tree:render_icon(line)
   return icon, color, file_extension or 'unknown'
 end
 
+--- draw line icons and tree lines
 function Tree:draw_line_extmarks(index, line, current_lines)
-  if (line == nil or line == '') then
+  if (line == nil) then
     return
   end
 
@@ -167,14 +168,14 @@ function Tree:draw_line_extmarks(index, line, current_lines)
   local line_below = current_lines[index + 1]
   local whitespace_count_to_first_char_below = 0
   if (line_below) then
-    whitespace_count_to_first_char_below = (line_below:find("%S") or #line_below) - 1
+    whitespace_count_to_first_char_below = (line_below:find("%S") or (#line_below + 1)) - 1
   end
 
   local has_same_indent_below = false
 
   for i = index + 1, #current_lines do
     local line_below_current = current_lines[i]
-    local current_whitespace_count_to_first_char_below = (line_below_current:find("%S") or #line_below_current) - 1
+    local current_whitespace_count_to_first_char_below = (line_below_current:find("%S") or (#line_below_current + 1)) - 1
     if (current_whitespace_count_to_first_char_below < whitespace_count_to_first_char) then
       break
     end
