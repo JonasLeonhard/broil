@@ -17,7 +17,6 @@ local ui = {
   search_win_id = nil,
   search_term = "", -- current search filter,
   info_buf_id = nil,
-  info_buf_default_msg = "Hit 'enter' to focus, '?' for help, or  ':<verb>' to execute a command",
   info_highlight_ns_id = vim.api.nvim_create_namespace('BroilInfoHighlights'),
   open_path = nil,
   open_history = {}, -- we can reset to this later
@@ -107,11 +106,17 @@ ui.create_info_bar_window = function()
 end
 
 --- @param msg string|nil
---- @param type 'verb'|nil
+--- @param type 'verb'|'search'|nil
 --- highlights everything in '' quotes
 ui.set_info_bar_message = function(msg, type)
   if (not msg) then
-    msg = ui.info_buf_default_msg
+    local time_str = ''
+    if (ui.render_start ~= nil and ui.render_end ~= nil) then
+      local time_diff = vim.fn.reltime(ui.render_start, ui.render_end)
+      time_str = "  |'" .. vim.fn.reltimestr(time_diff):gsub(" ", "") .. "sec'"
+    end
+
+    msg = "Hit 'enter' to focus, '?' for help, or  ':<verb>' to execute a command." .. time_str
   end
 
   -- highlight everything in '' quotes
@@ -122,6 +127,8 @@ ui.set_info_bar_message = function(msg, type)
   local icon = ' 󰙎 ';
   if (type == 'verb') then
     icon = '   ';
+  elseif (type == 'search') then
+    icon = ' 󱥸 ';
   end
   vim.api.nvim_buf_set_lines(ui.info_buf_id, 0, -1, false, { icon .. msg })
 
@@ -166,7 +173,7 @@ ui.on_search_input_listener = function()
       end
 
       if (previous_search_term ~= ui.search_term) then
-        utils.debounce(function()
+        utils.debounce("search", function()
           ui.render()
         end, 100)()
       end
@@ -460,6 +467,8 @@ end
 
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score
 ui.render = function(selection_index)
+  ui.set_info_bar_message('searching...', 'search')
+
   if (not ui.open_path) then
     ui.open_path = fs.get_path_of_current_window_or_nvim_cwd()
   end
@@ -470,7 +479,8 @@ ui.render = function(selection_index)
 
   local builder = Tree_Builder:new(ui.open_path, {
     pattern = ui.search_term,
-    optimal_lines = ui.tree_win.height
+    optimal_lines = ui.tree_win.height,
+    maximum_search_time_sec = 1
   })
   local tree_build = builder:build_tree()
   ui.tree = Tree:new({
@@ -484,6 +494,10 @@ ui.render = function(selection_index)
   ui.tree:render()
   ui.tree:initial_selection(selection_index)
   builder:destroy()
+
+  ui.render_start = builder.build_start
+  ui.render_end = builder.build_end
+  ui.set_info_bar_message(nil)
 end
 
 return ui

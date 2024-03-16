@@ -17,6 +17,7 @@ function Tree_Builder:new(path, options)
     dir_of_path = vim.fn.fnamemodify(path, ':h')
   end
 
+  tree_builder.maximum_search_time_sec = options.maximum_search_time_sec
   tree_builder.path = dir_of_path                    -- the dir of the opened path
   tree_builder.open_path = path                      -- the original open path
   tree_builder.optimal_lines = options.optimal_lines -- can be nil for infinite search
@@ -64,7 +65,9 @@ function Tree_Builder:gather_lines()
   local next_level_dirs = {}
   local matching_lines = 1
   while true do
-    if (self.optimal_lines and matching_lines >= search_size) then
+    local timestamp = vim.fn.reltime()
+    local time_diff = vim.fn.reltimefloat(vim.fn.reltime(self.build_start, timestamp))
+    if (self.optimal_lines and matching_lines >= search_size or time_diff > self.maximum_search_time_sec) then
       break
     end
 
@@ -375,9 +378,15 @@ function Tree_Builder:build_tree()
     return {}
   end
 
+  self.build_start = vim.fn.reltime()
+
   self:load_children(root_node.id)      -- load the root nodes children
   local bline_ids = self:gather_lines() -- unsorted bids
-  return self:as_tree(bline_ids)        -- structure with sorted and clustered blines
+  local tree = self:as_tree(bline_ids)  -- structure with sorted and clustered blines
+
+  self.build_end = vim.fn.reltime()
+
+  return tree
 end
 
 function Tree_Builder:destroy()

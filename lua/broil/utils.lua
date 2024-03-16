@@ -1,14 +1,14 @@
 local utils = {}
 
-function utils.debounce(fn, delay)
-  local timer_id = nil
+local timer_ids = {}
+function utils.debounce(debounce_id, fn, delay)
   return function(...)
-    if timer_id then
-      vim.loop.timer_stop(timer_id)
-      timer_id = nil
+    if timer_ids[debounce_id] then
+      vim.loop.timer_stop(timer_ids[debounce_id])
+      timer_ids[debounce_id] = nil
     end
     local args = { ... }
-    timer_id = vim.defer_fn(function()
+    timer_ids[debounce_id] = vim.defer_fn(function()
       fn(unpack(args))
     end, delay)
   end
