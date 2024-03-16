@@ -135,8 +135,8 @@ ui.set_info_bar_message = function(msg, type)
     if not start_quote then break end
 
     -- Adjust the positions for the prefix and the quotes themselves
-    local highlight_start = start_quote + 7 -- 7 for ' 󰙎 - ' and 1 for the quote
-    local highlight_end = end_quote + 7 - 1 -- 7 for ' 󰙎 - ' and -1 because the end position is inclusive
+    local highlight_start = start_quote + 6 -- 6 for ' 󰙎  ' and 1 for the quote
+    local highlight_end = end_quote + 6 - 1 -- 6 for ' 󰙎  ' and -1 because the end position is inclusive
 
     -- Add the highlight
     vim.api.nvim_buf_add_highlight(ui.info_buf_id, -1, 'BroilHelpCommand', 0, highlight_start, highlight_end)
@@ -182,7 +182,8 @@ ui.set_verb = function(verb)
     ui.set_info_bar_message()
   elseif (replaced_verb_variables == "") then
     ui.set_info_bar_message("Type a " ..
-      vim.o.shell .. " command to execute. '@' = 'selection_path', Hit 'enter' to execute it")
+      vim.o.shell ..
+      " command to execute. 󰋗 :'%<space>' = 'selection_path', '%n' = 'selection_name', '.<space>' = 'view_path', Hit 'enter' to execute it")
   else
     local tree_cursor = vim.api.nvim_win_get_cursor(ui.win_id)
     local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, tree_cursor[1] - 1, tree_cursor[1], false)[1]
@@ -211,7 +212,8 @@ ui.set_verb = function(verb)
     vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { ui.search_term .. ':' .. replaced_verb_variables })
     vim.api.nvim_win_set_cursor(ui.search_win_id, { 1, #ui.search_term + #replaced_verb_variables + 2 })
 
-    ui.set_info_bar_message(replaced_verb_variables, 'verb')
+    ui.set_info_bar_message("Run: " .. "'" .. replaced_verb_variables ..
+      "' 󰋗 :'%<space>' = 'selection_path', '%n' = 'selection_name', '.<space>' = 'view_path', Hit 'enter' to execute it")
   end
 
   ui.verb = replaced_verb_variables
