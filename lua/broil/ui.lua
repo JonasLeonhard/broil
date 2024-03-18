@@ -116,7 +116,8 @@ ui.set_info_bar_message = function(msg, type)
       time_str = "  |'" .. vim.fn.reltimestr(time_diff):gsub(" ", "") .. "sec'"
     end
 
-    msg = "Hit 'enter' to focus, '?' for help, or  ':<verb>' to execute a command." .. time_str
+    msg = "Hit 'enter' to focus, '(exact), ^(starts), (ends)$, !(not), | (or)'  or  ':<verb>' to execute a command." ..
+        time_str
   end
 
   -- highlight everything in '' quotes
