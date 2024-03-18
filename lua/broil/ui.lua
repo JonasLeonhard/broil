@@ -3,11 +3,16 @@ local Tree = require('broil.tree')
 local fs = require('broil.fs')
 local utils = require('broil.utils')
 local Editor = require('broil.editor')
+local Path = require "plenary.path"
+local config = require('broil.config')
 
 local ui = {
   -- #State
   mode = "tree", -- tree or buffer
-  -- #Content
+  -- #Tree Content
+  open_path = nil,
+  open_dir = nil,
+  open_history = {}, -- we can reset to this later
   buf_id = nil,
   win_id = nil,
   tree_win = {
@@ -16,11 +21,13 @@ local ui = {
   -- #Search
   search_win_id = nil,
   search_term = "", -- current search filter,
+  -- #Info Bar
   info_buf_id = nil,
   info_highlight_ns_id = vim.api.nvim_create_namespace('BroilInfoHighlights'),
-  open_path = nil,
-  open_dir = nil,
-  open_history = {}, -- we can reset to this later
+  -- #Preview
+  preview_buf_id = nil,
+  preview_win_id = nil,
+  -- #Tree Edits
   editor = Editor:new(),
 }
 
@@ -43,7 +50,7 @@ ui.create_tree_window = function(dir)
   ui.open_path = dir
 
   -- Create a split window with a specific height
-  vim.api.nvim_command(ui.tree_win.height .. 'split')
+  vim.api.nvim_command('aboveleft ' .. ui.tree_win.height .. 'split')
   ui.win_id = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(ui.win_id, ui.buf_id)
   vim.wo[ui.win_id].conceallevel = 3
@@ -70,7 +77,7 @@ ui.create_search_window = function()
   end
 
   -- Create a split window with a specific height for the search window
-  vim.api.nvim_command(1 .. 'split')
+  vim.api.nvim_command("botright " .. 1 .. 'split')
   ui.search_win_id = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(ui.search_win_id, ui.search_buf_id)
 
@@ -92,18 +99,87 @@ end
 ui.create_info_bar_window = function()
   ui.info_buf_id = vim.api.nvim_create_buf(false, true)
 
+  -- If a info bar window already exists, close it
+  if (ui.info_win_id ~= nil) then
+    vim.api.nvim_win_close(ui.info_win_id, true)
+  end
+
   local opts = {
     style = "minimal",
     relative = "win",
     win = ui.win_id,
     width = vim.o.columns,
     height = 1,
-    row = vim.api.nvim_win_get_height(ui.win_id) - 2,
+    row = vim.api.nvim_win_get_height(ui.win_id),
     col = 0,
   }
 
   ui.set_info_bar_message()
   ui.info_win_id = vim.api.nvim_open_win(ui.info_buf_id, false, opts)
+end
+
+ui.create_preview_window = function()
+  ui.preview_buf_id = vim.api.nvim_create_buf(false, true)
+
+  -- If a preview window already exists, close it
+  if (ui.preview_win_id ~= nil) then
+    vim.api.nvim_win_close(ui.preview_win_id, true)
+  end
+
+  -- Create a split window for the preview window
+  local split_width = math.floor(vim.api.nvim_win_get_width(ui.win_id) / 2.5)
+  vim.api.nvim_command(split_width .. 'vsplit')
+  ui.preview_win_id = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(ui.preview_win_id, ui.preview_buf_id)
+
+  -- set the content of the preview window to the hovered node
+  vim.api.nvim_create_autocmd({ "CursorMoved" }, {
+    buffer = ui.buf_id,
+    callback = function()
+      ui.preview_hovered_node()
+    end
+  })
+end
+
+ui.preview_hovered_node = function()
+  utils.debounce("preview", function()
+    local cursor_pos = vim.api.nvim_win_get_cursor(ui.win_id)
+    local cursor_y = cursor_pos[1]
+    local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, cursor_y - 1, cursor_y, false)[1]
+    local path_id = utils.get_bid_by_match(cursor_line)
+    local bline = ui.tree:find_by_id(path_id)
+
+    if (not bline) then
+      return
+    end
+
+    if (bline.file_type == "directory") then
+      vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false, { "Directory: " .. bline.path })
+    else
+      -- check if file is too large to preview
+      local mb_filesize = utils.bytes_to_megabytes(bline.fs_stat.size)
+      if (mb_filesize > config.file_size_preview_limit_mb) then
+        vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false,
+          { "File size limit of " .. config.file_size_preview_limit_mb .. "mb exceeded." })
+        return
+      end
+
+
+      if utils.check_is_binary(bline.path) then
+        utils.set_preview_message(ui.preview_buf_id, ui.preview_win_id, "Binary file")
+        return
+      end
+
+      Path:new(bline.path):_read_async(vim.schedule_wrap(function(data)
+        local lines = {}
+        for line in string.gmatch(data, "[^\r\n]+") do
+          table.insert(lines, line)
+        end
+        vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false, lines)
+        vim.api.nvim_set_option_value('filetype', bline.file_extension, { buf = ui.preview_buf_id })
+      end))
+    end
+  end, 200)()
 end
 
 --- @param msg string|nil
@@ -122,7 +198,6 @@ ui.set_info_bar_message = function(msg, type)
   end
 
   -- highlight everything in '' quotes
-  vim.api.nvim_command('highlight BroilHelpCommand guifg=#b4befe')
   vim.api.nvim_command('syntax match BroilHelpCommand /\'[^\']*\'/')
 
   -- Set the buffer lines
@@ -245,6 +320,7 @@ ui.select_next_node = function()
     return
   end
   ui.tree:select_next()
+  ui.preview_hovered_node()
 end
 
 
@@ -253,6 +329,7 @@ ui.select_prev_node = function()
     return
   end
   ui.tree:select_prev()
+  ui.preview_hovered_node()
 end
 
 ui.scroll_up = function()
@@ -261,6 +338,7 @@ ui.scroll_up = function()
   end
 
   ui.tree:scroll_up()
+  ui.preview_hovered_node()
 end
 
 ui.scroll_down = function()
@@ -269,6 +347,7 @@ ui.scroll_down = function()
   end
 
   ui.tree:scroll_down()
+  ui.preview_hovered_node()
 end
 
 ui.scroll_top_node = function()
@@ -277,6 +356,7 @@ ui.scroll_top_node = function()
   end
 
   ui.tree:scroll_top_node()
+  ui.preview_hovered_node()
 end
 
 ui.scroll_end = function()
@@ -285,6 +365,7 @@ ui.scroll_end = function()
   end
 
   ui.tree:scroll_end()
+  ui.preview_hovered_node()
 end
 
 --- Opens the currently selected tree node (Tree.selected_render_index)
@@ -369,9 +450,10 @@ end
 --- open a floating window with a tree view of the current file's directory
 ui.open = function()
   -- 1. create a search prompt at the bottom
-  ui.create_tree_window(fs.get_path_of_current_window_or_nvim_cwd())
-  ui.create_info_bar_window()
   ui.create_search_window()
+  ui.create_tree_window(fs.get_path_of_current_window_or_nvim_cwd())
+  ui.create_preview_window()
+  ui.create_info_bar_window()
 
   -- focus the search window
   vim.api.nvim_set_current_win(ui.search_win_id)
@@ -404,6 +486,11 @@ ui.close = function()
     ui.info_win_id = nil
   end
 
+  if (ui.preview_win_id ~= nil) then
+    vim.api.nvim_win_close(ui.preview_win_id, true)
+    ui.preview_win_id = nil
+  end
+
   vim.api.nvim_command('stopinsert')
 end
 
@@ -422,6 +509,12 @@ ui.on_close_listener = function()
   })
   vim.api.nvim_create_autocmd({ "WinClosed" }, {
     buffer = ui.search_buf_id,
+    callback = function()
+      ui.close()
+    end
+  })
+  vim.api.nvim_create_autocmd({ "WinClosed" }, {
+    buffer = ui.preview_buf_id,
     callback = function()
       ui.close()
     end
@@ -508,6 +601,7 @@ ui.render = function(selection_index)
   ui.render_start = builder.build_start
   ui.render_end = builder.build_end
   ui.set_info_bar_message(nil)
+  ui.preview_hovered_node()
 end
 
 return ui

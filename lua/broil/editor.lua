@@ -141,8 +141,6 @@ function Editor:highlight_new_and_modified(index, line, tree)
 
     if (edited) then
       -- highlight the line as edited
-      vim.api.nvim_command('highlight BroilEdited guifg=#f9e2af')
-      -- vim.api.nvim_buf_add_highlight(tree.buf_id, self.highlight_ns_id, 'BroilEdited', index - 1, 0, -1)
       vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
         sign_text = '┃',
         sign_hl_group = 'BroilEdited',
@@ -156,7 +154,6 @@ function Editor:highlight_new_and_modified(index, line, tree)
       vim.api.nvim_buf_clear_namespace(tree.buf_id, self.highlight_ns_id, index, index + 1)
     end
   else
-    vim.api.nvim_command('highlight BroilAdded guifg=#a6e3a1')
     vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
       sign_text = '┃',
       sign_hl_group = 'BroilAdded',
@@ -178,7 +175,6 @@ function Editor:highlight_deleted(index, bline, current_lines, tree)
 
   -- if not, we deleted it
   if (not current_line_exists) then
-    vim.api.nvim_command('highlight BroilDeleted guifg=#f38ba8')
     local line_ext_marks = vim.api.nvim_buf_get_extmarks(tree.buf_id, self.delete_ns_id, { index - 2, 0 },
       { index - 1, -1 }, {})
 

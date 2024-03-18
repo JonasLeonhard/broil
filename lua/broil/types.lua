@@ -26,6 +26,8 @@
 --- @field read_dir function|nil -> @return broil.ReadDir[]
 --- @field rendered string|nil -> how the bline was rendered originally, can be used to detect if changes are made
 --- @field extmark table|nil -> set_extmarks opts
+--- @field file_extension string|nil -> set only after rendering icons
+--- @field fs_stat table|nil
 
 --- @class broil.TreeOptions
 --- @field pattern string

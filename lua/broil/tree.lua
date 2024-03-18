@@ -61,19 +61,15 @@ function Tree:render()
 
     -- Render Icon highlights
     if (bline.file_type == 'directory') then
-      vim.api.nvim_command('highlight BroilDirLine guifg=#89b4fa')
       vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilDirLine', index - 1, 0, -1)
     end
 
     if (bline.line_type == 'pruning') then
-      vim.api.nvim_command('highlight BroilPruningLine guifg=#a6adc8')
       vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilPruningLine', index - 1, 0, -1)
     end
 
     -- Render relative path dir parts
     if (self.pattern ~= '' and bline.fzf_pos) then
-      vim.api.nvim_command('highlight BroilRelativeLine guifg=#74c7ec')
-
       local end_dir
       if (bline.file_type == 'directory') then
         local without_id = rendered_line:gsub("%[(%d+)%]$", "")
@@ -90,7 +86,6 @@ function Tree:render()
 
     -- search filter highlighting
     if bline.fzf_pos then
-      vim.api.nvim_command('highlight BroilSearchTerm guifg=#f9e2af')
       for _, idx in ipairs(bline.fzf_pos) do
         local idx_adjusted = #indent + idx
         vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilSearchTerm', index - 1,
@@ -217,6 +212,11 @@ function Tree:draw_line_extmarks(index, line, current_lines)
 
   -- render icon
   local icon, color, file_extension = self:render_icon(line)
+  local path_id = utils.get_bid_by_match(line)
+  local bline = self:find_by_id(path_id)
+  if (bline ~= nil) then
+    bline.file_extension = file_extension
+  end
   vim.api.nvim_command('highlight BroilTreeIcons_' .. file_extension .. ' guifg=' .. color) -- highlight Icon in color
 
   vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0, {
@@ -229,18 +229,16 @@ end
 
 --- @param selection_index number|nil the inistal index to select. Nil = select the highest score
 function Tree:initial_selection(selection_index)
-  vim.schedule(function()
-    if (selection_index) then
-      vim.api.nvim_win_set_cursor(self.win_id, { selection_index, 0 })
-      return
-    end
+  if (selection_index) then
+    vim.api.nvim_win_set_cursor(self.win_id, { selection_index, 0 })
+    return
+  end
 
-    if (self.pattern ~= '') then
-      vim.api.nvim_win_set_cursor(self.win_id, { self.highest_score_index, 0 })
-    else -- open the path
-      vim.api.nvim_win_set_cursor(self.win_id, { self.open_path_index, 0 })
-    end
-  end)
+  if (self.pattern ~= '') then
+    vim.api.nvim_win_set_cursor(self.win_id, { self.highest_score_index, 0 })
+  else -- open the path
+    vim.api.nvim_win_set_cursor(self.win_id, { self.open_path_index, 0 })
+  end
 end
 
 function Tree:select_next()

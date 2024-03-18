@@ -13,8 +13,10 @@ function Tree_Builder:new(path, options)
   setmetatable(tree_builder, Tree_Builder)
 
   local dir_of_path = path
-  if (vim.loop.fs_stat(path).type ~= 'directory') then
+  local fs_stat = vim.loop.fs_stat(path)
+  if (fs_stat.type ~= 'directory') then
     dir_of_path = vim.fn.fnamemodify(path, ':h')
+    fs_stat = vim.loop.fs_stat(dir_of_path)
   end
 
   tree_builder.maximum_search_time_sec = options.maximum_search_time_sec
@@ -36,6 +38,7 @@ function Tree_Builder:new(path, options)
     name = vim.fn.fnamemodify(path, ':t') or '', -- tail of tree path,
     children = {},
     file_type = 'directory',
+    fs_stat = fs_stat,
     has_match = true, -- always show the root node
     score = 0,
     fzf_score = 0,
@@ -235,6 +238,8 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     return nil
   end
 
+  local fs_stat = vim.loop.fs_stat(path)
+
   return BLine:new({
     parent_id = parent_bline.id,
     path = path,
@@ -246,6 +251,7 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     next_child_idx = 1,
     file_type = type,
     score = score,
+    fs_stat = fs_stat,
     fzf_score = fzf_score or 0,
     fzf_pos = fzf_pos or {},
     nb_kept_children = 0,

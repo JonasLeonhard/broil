@@ -34,6 +34,7 @@ local config = {
   fzf_fuzzy_match = true,
   show_hidden = true,            -- files/dirs with '.'
   sort_option = 'TypeDirsFirst', -- or 'TypeDirsLast'
+  file_size_preview_limit_mb = 5,
 }
 
 --- @param opts table|nil configuration See |broil.config|.
