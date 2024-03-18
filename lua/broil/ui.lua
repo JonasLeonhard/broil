@@ -19,6 +19,7 @@ local ui = {
   info_buf_id = nil,
   info_highlight_ns_id = vim.api.nvim_create_namespace('BroilInfoHighlights'),
   open_path = nil,
+  open_dir = nil,
   open_history = {}, -- we can reset to this later
   editor = Editor:new(),
 }
@@ -332,7 +333,7 @@ ui.run_current_verb = function()
     style = "minimal",
   })
   -- run the verb in the terminal
-  vim.api.nvim_command('tcd ' .. ui.open_path)
+  vim.api.nvim_command('tcd ' .. ui.open_dir)
   vim.api.nvim_command('term ' .. ui.verb)
 
   -- rerender when the terminal is closed
@@ -503,6 +504,7 @@ ui.render = function(selection_index)
   ui.tree:initial_selection(selection_index)
   builder:destroy()
 
+  ui.open_dir = builder.path
   ui.render_start = builder.build_start
   ui.render_end = builder.build_end
   ui.set_info_bar_message(nil)
