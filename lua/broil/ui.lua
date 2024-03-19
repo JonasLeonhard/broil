@@ -4,6 +4,7 @@ local utils = require('broil.utils')
 local Editor = require('broil.editor')
 local Path = require "plenary.path"
 local config = require('broil.config')
+local async = require('plenary.async')
 
 local ui = {
   -- #State
@@ -139,6 +140,9 @@ end
 
 ui.preview_hovered_node = function()
   utils.debounce("preview", function()
+    if (not ui.win_id) then
+      return
+    end
     local cursor_pos = vim.api.nvim_win_get_cursor(ui.win_id)
     local cursor_y = cursor_pos[1]
     local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, cursor_y - 1, cursor_y, false)[1]
@@ -172,7 +176,8 @@ ui.preview_hovered_node = function()
           table.insert(lines, line)
         end
         vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false, lines)
-        vim.api.nvim_set_option_value('filetype', bline.file_extension, { buf = ui.preview_buf_id })
+        local detect_filetype = vim.filetype.match({ filename = bline.name })
+        vim.api.nvim_set_option_value('filetype', detect_filetype, { buf = ui.preview_buf_id })
       end))
     end
   end, 200)()
@@ -239,15 +244,19 @@ ui.on_search_input_listener = function()
 
       if colon_pos then
         ui.search_term = string.sub(search_buf_text, 1, colon_pos - 1)
-        ui.set_verb(string.sub(search_buf_text, colon_pos + 1))
       else
         ui.search_term = search_buf_text
-        ui.set_verb()
       end
 
       if (previous_search_term ~= ui.search_term) then
+        ui.set_info_bar_message('searching...', 'search')
         utils.debounce("search", function()
           ui.render()
+          if (colon_pos) then
+            ui.set_verb(string.sub(search_buf_text, colon_pos + 1))
+          else
+            ui.set_verb()
+          end
         end, 100)()
       end
     end
@@ -565,35 +574,36 @@ end
 
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score
 ui.render = function(selection_index)
-  ui.set_info_bar_message('searching...', 'search')
+  local render_async = async.void(function()
+    if (ui.open_history[#ui.open_history] ~= ui.open_path) then -- add the path to the history if its not the same
+      table.insert(ui.open_history, ui.open_path)
+    end
 
-  if (ui.open_history[#ui.open_history] ~= ui.open_path) then -- add the path to the history if its not the same
-    table.insert(ui.open_history, ui.open_path)
-  end
+    local builder = Tree_Builder:new(ui.open_path, {
+      pattern = ui.search_term,
+      optimal_lines = ui.tree_win.height,
+      maximum_search_time_sec = 1
+    })
+    local tree_build = builder:build_tree()
+    ui.tree = Tree:new({
+      pattern = ui.search_term,
+      buf_id = ui.buf_id,
+      win_id = ui.win_id,
+      lines = tree_build.lines,
+      highest_score_index = tree_build.highest_score_index,
+      open_path_index = tree_build.open_path_index,
+    })
+    ui.tree:render()
+    ui.tree:initial_selection(selection_index)
+    builder:destroy()
 
-  local builder = Tree_Builder:new(ui.open_path, {
-    pattern = ui.search_term,
-    optimal_lines = ui.tree_win.height,
-    maximum_search_time_sec = 1
-  })
-  local tree_build = builder:build_tree()
-  ui.tree = Tree:new({
-    pattern = ui.search_term,
-    buf_id = ui.buf_id,
-    win_id = ui.win_id,
-    lines = tree_build.lines,
-    highest_score_index = tree_build.highest_score_index,
-    open_path_index = tree_build.open_path_index,
-  })
-  ui.tree:render()
-  ui.tree:initial_selection(selection_index)
-  builder:destroy()
+    ui.open_dir = builder.path
+    ui.render_start = builder.build_start
+    ui.render_end = builder.build_end
+    ui.preview_hovered_node()
+  end)
 
-  ui.open_dir = builder.path
-  ui.render_start = builder.build_start
-  ui.render_end = builder.build_end
-  ui.set_info_bar_message(nil)
-  ui.preview_hovered_node()
+  async.run(render_async)
 end
 
 return ui
