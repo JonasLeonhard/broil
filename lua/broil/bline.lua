@@ -3,6 +3,7 @@ local cache = require('broil.cache')
 local async = require('plenary.async')
 
 local id_counter = 0;
+local read_counter = 0;
 
 local BLine = {}
 BLine.__index = BLine
@@ -40,11 +41,14 @@ function BLine:read_dir(callback)
 
   while handle do
     local name, type = vim.loop.fs_scandir_next(handle)
-    async.util.scheduler() -- yield to scheduler to prevent blocking
+    if (read_counter % 200 == 0) then
+      async.util.scheduler() -- allow other tasks to run from time to time
+    end
     if not name then
       break
     end
 
+    read_counter = read_counter + 1
     callback(name, type)
   end
 end
