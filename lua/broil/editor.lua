@@ -51,7 +51,11 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     end
 
     if (bline) then
-      path_from = bline.path
+      if (bline.file_type == 'directory') then
+        path_from = bline:get_dir_path()
+      else
+        path_from = bline.path
+      end
     end
 
     -- iterate backwards from this line in the tree, until we hit a line with a parsable bid?
@@ -70,8 +74,9 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
       end
     end
 
-    -- remove leading whitespace before first char, remove path_id from the end, remove relative path
-    local edited_line = line:gsub("^%s*", ""):gsub("%[%d+%]$", "")
+    -- remove leading whitespace before first char, remove path_id from the end, remove trailing slash for dirs
+    local edited_line_w_trailing_slash = line:gsub("^%s*", ""):gsub("%[%d+%]$", "")
+    local edited_line, replaced_trailing_slash_count = edited_line_w_trailing_slash:gsub("%/$", "")
     local edited_line_name = vim.fn.fnamemodify(edited_line, ':t')
 
     -- build the path_to by appending the bline name to the bline above this line
@@ -80,11 +85,19 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     if (parent_bline_by_indent ~= nil) then
       path_head = parent_bline_by_indent:get_dir_path()
     else
-      path_head = vim.fn.fnamemodify(tree.lines[1].path, ':h')
+      path_head = tree.lines[1]:get_dir_path()
     end
 
     if (edited_line_name ~= "") then
-      path_to = path_head .. '/' .. edited_line_name
+      if (path_id == tree.lines[1].id) then
+        path_to = edited_line_w_trailing_slash
+      else
+        path_to = path_head .. edited_line_name
+
+        if (replaced_trailing_slash_count > 0) then
+          path_to = path_to .. '/'
+        end
+      end
     end
 
 
@@ -147,9 +160,6 @@ function Editor:highlight_new_and_modified(index, line, tree)
         invalidate = true
       })
     else
-      if (path_id == 1) then
-        print("clear edits of", index, line)
-      end
       -- remove the highlight
       vim.api.nvim_buf_clear_namespace(tree.buf_id, self.highlight_ns_id, index, index + 1)
     end

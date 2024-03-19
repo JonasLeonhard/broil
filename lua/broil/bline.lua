@@ -56,10 +56,10 @@ end
 --- @return string path of the dir. If the bline is a dir, return the dir path, if its a file, return the dir of the file
 function BLine:get_dir_path()
   if (self.file_type == "directory") then
-    return self.path
+    return self.path .. '/'
   end
 
-  return vim.fn.fnamemodify(self.path, ":p:h")
+  return vim.fn.fnamemodify(self.path, ":p:h") .. '/'
 end
 
 return BLine
