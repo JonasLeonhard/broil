@@ -2,6 +2,7 @@ local broil = {}
 
 local config = require("broil.config")
 local ui = require("broil.ui")
+local fs = require('broil.fs')
 
 broil.setup = function(opts)
   -- DEBUG THE PERFORMANCE OF THE CREATED FLAMEGRAPH WITH: https://www.speedscope.app/
@@ -25,7 +26,12 @@ broil.setup = function(opts)
   vim.api.nvim_command('highlight BroilHelpCommand guifg=#b4befe')
 end
 
-broil.open = function()
+broil.open = function(path)
+  if (path) then
+    ui.open_path = path
+  else
+    ui.open_path = fs.get_path_of_current_window_or_nvim_cwd()
+  end
   ui.open()
 end
 

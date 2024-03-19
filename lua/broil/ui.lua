@@ -1,6 +1,5 @@
 local Tree_Builder = require('broil.tree_builder')
 local Tree = require('broil.tree')
-local fs = require('broil.fs')
 local utils = require('broil.utils')
 local Editor = require('broil.editor')
 local Path = require "plenary.path"
@@ -32,8 +31,7 @@ local ui = {
 }
 
 --- scan the file system at dir and create a tree view for the buffer
---- @param dir string root directory to create nodes from
-ui.create_tree_window = function(dir)
+ui.create_tree_window = function()
   -- 1. create a tree buffer
   ui.buf_id = vim.api.nvim_create_buf(false, true)
   vim.b[ui.buf_id].modifiable = true
@@ -46,8 +44,6 @@ ui.create_tree_window = function(dir)
   if (ui.win_id ~= nil) then
     vim.api.nvim_win_close(ui.win_id, true)
   end
-
-  ui.open_path = dir
 
   -- Create a split window with a specific height
   vim.api.nvim_command('aboveleft ' .. ui.tree_win.height .. 'split')
@@ -451,7 +447,7 @@ end
 ui.open = function()
   -- 1. create a search prompt at the bottom
   ui.create_search_window()
-  ui.create_tree_window(fs.get_path_of_current_window_or_nvim_cwd())
+  ui.create_tree_window()
   ui.create_preview_window()
   ui.create_info_bar_window()
 
@@ -570,10 +566,6 @@ end
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score
 ui.render = function(selection_index)
   ui.set_info_bar_message('searching...', 'search')
-
-  if (not ui.open_path) then
-    ui.open_path = fs.get_path_of_current_window_or_nvim_cwd()
-  end
 
   if (ui.open_history[#ui.open_history] ~= ui.open_path) then -- add the path to the history if its not the same
     table.insert(ui.open_history, ui.open_path)
