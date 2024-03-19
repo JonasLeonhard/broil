@@ -176,7 +176,7 @@ ui.preview_hovered_node = function()
           table.insert(lines, line)
         end
         vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false, lines)
-        local detect_filetype = vim.filetype.match({ filename = bline.name })
+        local detect_filetype = vim.filetype.match({ buf = ui.preview_buf_id, filename = bline.name })
         vim.api.nvim_set_option_value('filetype', detect_filetype, { buf = ui.preview_buf_id })
       end))
     end
