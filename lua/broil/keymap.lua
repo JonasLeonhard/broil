@@ -55,7 +55,7 @@ keymap.attach = function()
   keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_edits_float, ui.open_edits_float)
   keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_edits_float, ui.open_edits_float)
 
-  keymap.map(ui.editor.buf_id, { 'n' }, config.mappings.close_edits_float, ui.close_edits_float)
+  keymap.map(ui.editor.buf_id, { 'n', 'i' }, config.mappings.close, ui.close_edits_float)
   -- internal
   keymap.map(ui.buf_id, { 'n' }, 'p', ui.paste)
 end

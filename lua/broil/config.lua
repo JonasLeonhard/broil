@@ -14,8 +14,7 @@ local config = {
     open_selected_node = '<CR>',
     open_selected_node2 = '<C-l>',
     open_parent_dir = '<C-h>',
-    open_edits_float = '<C-e>',
-    close_edits_float = 'q'
+    open_edits_float = '<C-e>'
   },
   special_paths = {
     ["media"] = "no-enter",
