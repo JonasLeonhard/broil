@@ -12,6 +12,9 @@ function Editor:new()
   self.highlight_ns_id = vim.api.nvim_create_namespace('BroilEditHighlights')
   self.delete_ns_id = vim.api.nvim_create_namespace('BroilDeleteHighlights')
   self.deletion_count = 0
+
+  self.buf_id = vim.api.nvim_create_buf(false, true)
+  self.win_id = nil
   return editor
 end
 
@@ -197,6 +200,39 @@ function Editor:highlight_deleted(index, bline, current_lines, tree)
     end
 
     self.deletion_count = self.deletion_count + 1
+  end
+end
+
+function Editor:open_edits_float(win_id)
+  vim.api.nvim_buf_set_lines(self.buf_id, 0, -1, false, { 'EDITS: ' })
+  for _, edit in pairs(self.current_edits) do
+    vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false,
+      { 'path_from: ' .. tostring(edit.path_from) .. ' path_to: ' .. tostring(edit.path_to) })
+  end
+
+  if (self.win_id) then
+    return vim.api.nvim_set_current_win(self.win_id)
+  end
+
+  local height = math.floor(vim.api.nvim_win_get_height(win_id) / 2)
+  local opts = {
+    style = "minimal",
+    relative = "win",
+    win = win_id,
+    width = vim.o.columns,
+    height = height,
+    row = vim.api.nvim_win_get_height(win_id) - height,
+    col = 0,
+  }
+  self.win_id = vim.api.nvim_open_win(self.buf_id, true, opts)
+
+  vim.api.nvim_set_current_win(self.win_id)
+end
+
+function Editor:close_edits_float()
+  if (self.win_id) then
+    vim.api.nvim_win_close(self.win_id, true)
+    self.win_id = nil
   end
 end
 

@@ -47,3 +47,7 @@
 --- @field handle_edits function
 --- @field current_edits broil.Edit[]
 --- @field building boolean wheter we are currently building edits
+--- @field open_edits_float function opens a float alowing to stage/unstage edits
+--- @field close_edits_float function close float alowing to stage/unstage edits
+--- @field buf_id integer
+--- @field win_id integer

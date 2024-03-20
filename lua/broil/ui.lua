@@ -496,6 +496,10 @@ ui.close = function()
     ui.preview_win_id = nil
   end
 
+  if (ui.editor.win_id ~= nil) then
+    ui.editor:close_edits_float()
+  end
+
   vim.api.nvim_command('stopinsert')
 end
 
@@ -522,6 +526,13 @@ ui.on_close_listener = function()
     buffer = ui.preview_buf_id,
     callback = function()
       ui.close()
+    end
+  })
+
+  vim.api.nvim_create_autocmd({ "WinClosed" }, {
+    buffer = ui.editor.buf_id,
+    callback = function()
+      ui.editor:close_edits_float()
     end
   })
 end
@@ -570,6 +581,14 @@ end
 ui.set_search = function(search_term)
   ui.search_term = search_term
   vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { search_term })
+end
+
+ui.open_edits_float = function()
+  ui.editor:open_edits_float(ui.win_id, ui.buf_id)
+end
+
+ui.close_edits_float = function()
+  ui.editor:close_edits_float()
 end
 
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score

@@ -8,10 +8,14 @@ local config = {
 
     -- search
     select_next_node = '<C-j>',
+    select_next_node_normal = 'j',
     select_prev_node = '<C-k>',
+    select_prev_node_normal = 'k',
     open_selected_node = '<CR>',
     open_selected_node2 = '<C-l>',
     open_parent_dir = '<C-h>',
+    open_edits_float = '<C-e>',
+    close_edits_float = 'q'
   },
   special_paths = {
     ["media"] = "no-enter",
