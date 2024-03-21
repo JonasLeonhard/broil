@@ -63,7 +63,7 @@ function utils.check_is_binary(path)
   if (not file) then
     return
   end
-  local bytes = file:read(1000)
+  local bytes = file:read(100)
   file:close()
   if (not bytes) then
     return
