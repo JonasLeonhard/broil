@@ -52,7 +52,7 @@ end
 
 --- @param path string
 --- dirty binary check... there must be a better way to do this performantly.
---- checks if a file is binary by reading the first 1000 bytes of the file and
+--- checks if a file is binary by reading the first n bytes of the file and
 --- checking if any of those bytes represent a control character (a byte with a value less than 32 in ASCII).
 --- Control characters are non-printable characters that are commonly found in binary files but rarely in text files.
 --- The exceptions are the tab (ASCII 9), line feed (ASCII 10), and carriage return (ASCII 13) characters,
