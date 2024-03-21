@@ -24,6 +24,7 @@ broil.setup = function(opts)
   vim.api.nvim_command('highlight BroilPruningLine guifg=#a6adc8')
   vim.api.nvim_command('highlight BroilRelativeLine guifg=#74c7ec')
   vim.api.nvim_command('highlight BroilHelpCommand guifg=#b4befe')
+  vim.api.nvim_command('highlight BroilEditorHeadline guifg=#cba6f7')
 end
 
 broil.open = function(path)

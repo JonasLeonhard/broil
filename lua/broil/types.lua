@@ -41,13 +41,23 @@
 --- @field bid broil.BId|nil -- bline id the edit was made on
 --- @field path_from string -- path of what was edited
 --- @field path_to string|nil -- path of where it is edited to
+--- @field staged boolean -- wheter the edit is staged
 
 --- @class broil.Editor
 --- @field edits broil.Edit[]
 --- @field handle_edits function
---- @field current_edits broil.Edit[]
+--- @field current_edits broil.Edit[] [bId] -> edit
 --- @field building boolean wheter we are currently building edits
 --- @field open_edits_float function opens a float alowing to stage/unstage edits
 --- @field close_edits_float function close float alowing to stage/unstage edits
 --- @field buf_id integer
 --- @field win_id integer
+--- @field stage_edit function
+--- @field stage_edit_range function
+--- @field stage_all_edits function
+--- @field unstage_edit function
+--- @field unstage_edit_range function
+--- @field unstage_all_edits function
+--- @field undo_edit function
+--- @field undo_edit_range function
+--- @field apply_staged_edits function

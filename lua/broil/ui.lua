@@ -56,10 +56,7 @@ ui.create_tree_window = function()
   vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
     buffer = ui.buf_id,
     callback = function()
-      print("build edits...")
       ui.editor:handle_edits(ui.tree)
-
-      print("edits", vim.inspect(ui.editor.current_edits))
     end
   })
 end
@@ -184,7 +181,7 @@ ui.preview_hovered_node = function()
 end
 
 --- @param msg string|nil
---- @param type 'verb'|'search'|nil
+--- @param type 'verb'|'search'|'edits'|nil
 --- highlights everything in '' quotes
 ui.set_info_bar_message = function(msg, type)
   if (not msg) then
@@ -194,7 +191,15 @@ ui.set_info_bar_message = function(msg, type)
       time_str = "  |'" .. vim.fn.reltimestr(time_diff):gsub(" ", "") .. "sec'"
     end
 
-    msg = "Hit 'enter' to focus, '(exact), ^(starts), (ends)$, !(not), | (or)'  or  ':<verb>' to execute a command." ..
+    msg = "Hit '" ..
+        config.mappings.open_selected_node ..
+        '|' ..
+        config.mappings.open_selected_node2 ..
+        "' to open, '" ..
+        config.mappings.select_prev_node ..
+        '|' ..
+        config.mappings.select_next_node ..
+        "' to move, '(exact), ^(starts), (ends)$, !(not), | (or)'  or  ':<verb>' to execute a command." ..
         time_str
   end
 
@@ -207,6 +212,8 @@ ui.set_info_bar_message = function(msg, type)
     icon = '   ';
   elseif (type == 'search') then
     icon = ' 󱥸 ';
+  elseif (type == 'edits') then
+    icon = ' 󱇧 ';
   end
   vim.api.nvim_buf_set_lines(ui.info_buf_id, 0, -1, false, { icon .. msg })
 
@@ -248,13 +255,15 @@ ui.on_search_input_listener = function()
         ui.search_term = search_buf_text
       end
 
+      if (colon_pos) then
+        ui.set_verb(string.sub(search_buf_text, colon_pos + 1))
+      end
       if (previous_search_term ~= ui.search_term) then
         ui.set_info_bar_message('searching...', 'search')
         utils.debounce("search", function()
           ui.render()
-          if (colon_pos) then
-            ui.set_verb(string.sub(search_buf_text, colon_pos + 1))
-          else
+
+          if (not colon_pos) then
             ui.set_verb()
           end
         end, 100)()
@@ -585,10 +594,25 @@ end
 
 ui.open_edits_float = function()
   ui.editor:open_edits_float(ui.win_id, ui.buf_id)
+  ui.set_info_bar_message(
+    "Edits: '" ..
+    config.mappings.stage_edit ..
+    "' = stage, '" ..
+    config.mappings.stage_all_edits ..
+    '|' ..
+    config.mappings.stage_all_edits2 ..
+    "' = stageall, '" ..
+    config.mappings.unstage_edit ..
+    "' = unstage, '" ..
+    config.mappings.unstage_all_edits ..
+    "' = unstageall, '" ..
+    config.mappings.undo_edit .. "' = undo edit, '" .. config.mappings.apply_staged_edits .. "' = apply staged",
+    'edits')
 end
 
 ui.close_edits_float = function()
   ui.editor:close_edits_float()
+  ui.set_info_bar_message()
 end
 
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score

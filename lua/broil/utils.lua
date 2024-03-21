@@ -28,6 +28,18 @@ function utils.get_bid_by_match(line)
   return res
 end
 
+function utils.get_edit_id_by_match(line)
+  if (line == nil) then return nil end
+
+  local id_str = line:match("%[(.-)%]$")
+
+  if (id_str == nil or id_str == '') then
+    return nil
+  end
+
+  return id_str
+end
+
 --- remove special meaning from chars in a gsub string. Eg. the dot char.
 --- replaces all non-alphanumeric characters with their escaped versions
 function utils.escape_pattern(text)
@@ -82,6 +94,14 @@ utils.table_of_length_filled_with = function(n, val)
     table.insert(empty_lines, val)
   end
   return empty_lines
+end
+
+utils.table_length = function(tbl)
+  local counter = 0
+  for _ in pairs(tbl) do
+    counter = counter + 1
+  end
+  return counter
 end
 
 utils.set_preview_message = function(bufnr, winid, message, fillchar)

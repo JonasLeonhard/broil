@@ -55,9 +55,23 @@ keymap.attach = function()
   keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_edits_float, ui.open_edits_float)
   keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_edits_float, ui.open_edits_float)
 
-  keymap.map(ui.editor.buf_id, { 'n', 'i' }, config.mappings.close, ui.close_edits_float)
   -- internal
   keymap.map(ui.buf_id, { 'n' }, 'p', ui.paste)
+
+  -- Editor
+  keymap.map(ui.editor.buf_id, { 'n', 'i' }, config.mappings.close, ui.close_edits_float)
+  keymap.map(ui.editor.buf_id, { 'n' }, config.mappings.stage_edit, function() ui.editor:stage_edit() end)
+  keymap.map(ui.editor.buf_id, { 'v' }, config.mappings.stage_edit, function() ui.editor:stage_edit_range() end)
+  keymap.map(ui.editor.buf_id, { 'n', 'v' }, config.mappings.stage_all_edits, function() ui.editor:stage_all_edits() end)
+  keymap.map(ui.editor.buf_id, { 'n', 'v' }, config.mappings.stage_all_edits2, function() ui.editor:stage_all_edits() end)
+  keymap.map(ui.editor.buf_id, { 'n' }, config.mappings.unstage_edit, function() ui.editor:unstage_edit() end)
+  keymap.map(ui.editor.buf_id, { 'v' }, config.mappings.unstage_edit, function() ui.editor:unstage_edit_range() end)
+  keymap.map(ui.editor.buf_id, { 'n', 'v' }, config.mappings.unstage_all_edits,
+    function() ui.editor:unstage_all_edits() end)
+  keymap.map(ui.editor.buf_id, { 'n' }, config.mappings.undo_edit, function() ui.editor:undo_edit() end)
+  keymap.map(ui.editor.buf_id, { 'v' }, config.mappings.undo_edit, function() ui.editor:undo_edit_range() end)
+  keymap.map(ui.editor.buf_id, { 'n', 'v' }, config.mappings.apply_staged_edits,
+    function() ui.editor:apply_staged_edits() end)
 end
 
 return keymap

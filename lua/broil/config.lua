@@ -14,7 +14,16 @@ local config = {
     open_selected_node = '<CR>',
     open_selected_node2 = '<C-l>',
     open_parent_dir = '<C-h>',
-    open_edits_float = '<C-e>'
+    open_edits_float = '<C-e>',
+
+    -- edits window
+    stage_edit = 's',
+    stage_all_edits = 'S',
+    stage_all_edits2 = '<c-s>',
+    unstage_edit = 'u',
+    unstage_all_edits = 'U',
+    undo_edit = 'x',
+    apply_staged_edits = '<c-y>'
   },
   special_paths = {
     ["media"] = "no-enter",
