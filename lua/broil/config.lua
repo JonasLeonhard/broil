@@ -47,23 +47,14 @@ local config = {
   sort_option = 'TypeDirsFirst', -- or 'TypeDirsLast'
   file_size_preview_limit_mb = 5,
 
+  shell = vim.o.shell,
+  shell_exec_flag = '-c', -- will result in `sh -c 'command_below'`
+
   -- filesystem commands
-  rm_command = {
-    command = 'rm',
-    args = { '-r' }, -- path will be appended automatically
-  },
-  mv_command = {
-    command = 'mv',
-    args = {} -- from_path and to_path will be appended automatically
-  },
-  mkdir_command = {
-    command = 'mkdir',
-    args = { '-p' } -- dir_path will be appended automatically
-  },
-  touch_command = {
-    command = 'touch',
-    args = {} -- file_path will be appended automatically
-  },
+  rm_command = 'rm', -- you could use a trash command here. Or rm --trash for nushell...
+  mv_command = 'mv',
+  mkdir_command = 'mkdir -p',
+  touch_command = 'touch'
 }
 
 --- @param opts table|nil configuration See |broil.config|.
