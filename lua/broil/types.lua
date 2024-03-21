@@ -42,6 +42,8 @@
 --- @field path_from string -- path of what was edited
 --- @field path_to string|nil -- path of where it is edited to
 --- @field staged boolean -- wheter the edit is staged
+--- @field status 'create'|'edit'|'delete'|'queued'|'created'|'edited'|'deleted'
+--- @field job_out string[] -- stdout of the job
 
 --- @class broil.Editor
 --- @field edits broil.Edit[]

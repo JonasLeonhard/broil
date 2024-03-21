@@ -1,4 +1,5 @@
 local utils = require('broil.utils')
+local fs = require('broil.fs')
 
 local Editor = {}
 Editor.__index = Editor
@@ -110,11 +111,19 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
       if (path_id) then
         id = tostring(path_id)
       end
-      self.current_edits[tostring(id)] = {
+      local status = 'edit'
+      if (not path_from) then
+        status = 'create'
+      elseif (not path_to) then
+        status = 'delete'
+      end
+      self.current_edits[id] = {
         id = id,
         path_from = path_from,
         path_to = path_to,
-        staged = false
+        staged = false,
+        status = status,
+        job_out = nil
       }
     end
   end
@@ -145,10 +154,12 @@ function Editor:build_deleted_and_remove_children(bline, tree)
       path_from = bline.path .. '/'
     end
     self.current_edits[tostring(bline.id)] = {
-      id = bline.id,
+      id = tostring(bline.id),
       path_from = path_from,
       path_to = nil,
-      staged = false
+      staged = false,
+      status = 'delete',
+      job_out = nil
     }
   end
 end
@@ -250,12 +261,21 @@ function Editor:render_edits()
 end
 
 function Editor:render_edit(line_number, edit)
-  local line_status = 'EDITED    '
-  if (edit.path_to == nil) then
+  local line_status = 'EDIT      '
+  if (edit.status == 'edited') then
+    line_status = 'EDITED    '
+  elseif (edit.status == 'delete') then
+    line_status = 'DELETE    '
+  elseif (edit.status == 'deleted') then
     line_status = 'DELETED   '
-  end
-  if (edit.path_from == nil) then
-    line_status = 'NEW       '
+  elseif (edit.status == 'create') then
+    line_status = 'CREATE    '
+  elseif (edit.status == 'created') then
+    line_status = 'CREATED    '
+  elseif (edit.status == 'queued') then
+    line_status = 'QUEUED    '
+  elseif (edit.status == 'error') then
+    line_status = 'ERROR     '
   end
 
   local rendered = tostring(edit.path_from) ..
@@ -263,18 +283,37 @@ function Editor:render_edit(line_number, edit)
 
   vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false, { line_status .. rendered })
 
-  if (line_status == 'DELETED   ') then
+  if (edit.status == 'delete') then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilDeleted', line_number, 0, 7)
-  elseif (line_status == 'NEW       ') then
+  elseif (edit.status == 'create') then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilAdded', line_number, 0, 7)
-  elseif (line_status == 'EDITED    ') then
+  elseif (edit.status == 'edit') then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilEdited', line_number, 0, 7)
+  elseif (edit.status == 'queued') then
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilQueued', line_number, 0, 7)
+  elseif (edit.status == 'error') then
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilDeleted', line_number, 0, 7)
+  elseif (edit.status == 'deleted' or edit.status == 'created' or edit.status == 'edited') then
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilInfo', line_number, 0, 7)
+  end
+
+  if (edit.job_out) then
+    vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false, edit.job_out)
+    for i = 0, #edit.job_out do
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilPruningLine', line_number + 1 + i, 0, -1)
+    end
   end
 end
 
 function Editor:open_edits_float(win_id)
   if (self.win_id) then
     return vim.api.nvim_set_current_win(self.win_id)
+  end
+
+  for e_id, edit in pairs(self.current_edits) do
+    if (edit.status == 'created' or edit.status == 'edited' or edit.status == 'deleted') then
+      self.current_edits[e_id] = nil
+    end
   end
 
   self:render_edits()
@@ -443,8 +482,52 @@ function Editor:undo_edit_range()
   vim.api.nvim_win_set_cursor(0, { new_cursor_pos, 0 })
 end
 
-function Editor:apply_staged_edits()
-  print("todo apply staged edits")
+function Editor:apply_staged_edits(callback)
+  for _, edit in pairs(self.current_edits) do
+    if (edit.staged) then
+      -- remove the edit after aplying it
+      self.current_edits[edit.id].status = 'queued'
+      self:render_edits()
+
+      if (edit.path_to == nil) then
+        fs:delete(edit.path_from, vim.schedule_wrap(function(job_out, exit_code)
+          if (exit_code == 0) then
+            self.current_edits[edit.id].status = 'deleted'
+          else
+            self.current_edits[edit.id].status = 'error'
+          end
+
+          self.current_edits[edit.id].job_out = job_out
+          self:render_edits()
+          callback()
+        end))
+      elseif (edit.path_from == nil) then
+        fs:create(edit.path_to, vim.schedule_wrap(function(job_out, exit_code)
+          if (exit_code == 0) then
+            self.current_edits[edit.id].status = 'created'
+          else
+            self.current_edits[edit.id].status = 'error'
+          end
+
+          self.current_edits[edit.id].job_out = job_out
+          self:render_edits()
+          callback()
+        end))
+      elseif (edit.path_from and edit.path_to) then
+        fs:move(edit.path_from, edit.path_to, vim.schedule_wrap(function(job_out, exit_code)
+          if (exit_code == 0) then
+            self.current_edits[edit.id].status = 'edited'
+          else
+            self.current_edits[edit.id].status = 'error'
+          end
+
+          self.current_edits[edit.id].job_out = job_out
+          self:render_edits()
+          callback()
+        end))
+      end
+    end
+  end
 end
 
 return Editor

@@ -1,8 +1,8 @@
 local keymap = {}
 
 local config = require('broil.config')
-local filesystem = require('broil.fs')
 local ui = require('broil.ui')
+local utils = require('broil.utils')
 
 keymap.map = function(buf_id, mode, lhs, rhs, opts)
   if lhs == '' then return end
@@ -11,9 +11,6 @@ keymap.map = function(buf_id, mode, lhs, rhs, opts)
 end
 
 keymap.attach = function()
-  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.synchronize, filesystem.synchronize, { desc = 'Synchronize' })
-  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.synchronize, filesystem.synchronize,
-    { desc = 'Synchronize' })
   keymap.map(ui.buf_id, 'n', config.mappings.help, ui.help, { desc = 'Help' })
 
   keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.close, ui.close, { desc = 'Close' })
@@ -71,7 +68,13 @@ keymap.attach = function()
   keymap.map(ui.editor.buf_id, { 'n' }, config.mappings.undo_edit, function() ui.editor:undo_edit() end)
   keymap.map(ui.editor.buf_id, { 'v' }, config.mappings.undo_edit, function() ui.editor:undo_edit_range() end)
   keymap.map(ui.editor.buf_id, { 'n', 'v' }, config.mappings.apply_staged_edits,
-    function() ui.editor:apply_staged_edits() end)
+    function()
+      ui.editor:apply_staged_edits(function()
+        utils.debounce('apply_staged_edits', function()
+          ui.render()
+        end, 100)()
+      end)
+    end)
 end
 
 return keymap

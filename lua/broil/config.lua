@@ -2,7 +2,6 @@ local config = {
   mappings = {
     -- general
     help = '?',
-    synchronize = '<C-y>',
     close = '<C-q>',
     pop_history = '<C-p>',
 
@@ -47,6 +46,24 @@ local config = {
   show_hidden = true,            -- files/dirs with '.'
   sort_option = 'TypeDirsFirst', -- or 'TypeDirsLast'
   file_size_preview_limit_mb = 5,
+
+  -- filesystem commands
+  rm_command = {
+    command = 'rm',
+    args = { '-r' }, -- path will be appended automatically
+  },
+  mv_command = {
+    command = 'mv',
+    args = {} -- from_path and to_path will be appended automatically
+  },
+  mkdir_command = {
+    command = 'mkdir',
+    args = { '-p' } -- dir_path will be appended automatically
+  },
+  touch_command = {
+    command = 'touch',
+    args = {} -- file_path will be appended automatically
+  },
 }
 
 --- @param opts table|nil configuration See |broil.config|.
