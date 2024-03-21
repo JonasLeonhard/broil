@@ -14,7 +14,11 @@ function Tree_Builder:new(path, options)
 
   local dir_of_path = path
   local fs_stat = vim.loop.fs_stat(path)
-  if (fs_stat.type ~= 'directory') then
+  while (not fs_stat and (dir_of_path ~= '.' or dir_of_path ~= '/' or dir_of_path ~= '')) do -- try the parent dir instead
+    dir_of_path = vim.fn.fnamemodify(dir_of_path, ':h')
+    fs_stat = vim.loop.fs_stat(dir_of_path)
+  end
+  if (fs_stat and fs_stat.type ~= 'directory') then
     dir_of_path = vim.fn.fnamemodify(path, ':h')
     fs_stat = vim.loop.fs_stat(dir_of_path)
   end
