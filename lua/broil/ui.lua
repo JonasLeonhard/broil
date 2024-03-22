@@ -206,9 +206,6 @@ ui.set_info_bar_message = function(msg, type)
         time_str
   end
 
-  -- highlight everything in '' quotes
-  vim.api.nvim_command('syntax match BroilHelpCommand /\'[^\']*\'/')
-
   -- Set the buffer lines
   local icon = ' 󰙎 ';
   if (type == 'verb') then
@@ -222,25 +219,23 @@ ui.set_info_bar_message = function(msg, type)
   vim.api.nvim_buf_set_lines(ui.info_buf_id, 0, -1, false, { icon .. msg })
 
   -- Find and highlight each quoted string
-  if (type ~= 'search') then
-    local start_pos = 1
-    while true do
-      -- Find the next quoted string
-      local start_quote, end_quote = string.find(msg, "'[^']*'", start_pos)
+  local start_pos = 1
+  while true do
+    -- Find the next quoted string
+    local start_quote, end_quote = string.find(msg, "'[^']*'", start_pos)
 
-      -- If no more quoted strings were found, break the loop
-      if not start_quote then break end
+    -- If no more quoted strings were found, break the loop
+    if not start_quote then break end
 
-      -- Adjust the positions for the prefix and the quotes themselves
-      local highlight_start = start_quote + 6 -- 6 for ' 󰙎  ' and 1 for the quote
-      local highlight_end = end_quote + 6 - 1 -- 6 for ' 󰙎  ' and -1 because the end position is inclusive
+    -- Adjust the positions for the prefix and the quotes themselves
+    local highlight_start = start_quote + 6 -- 6 for ' 󰙎  ' and 1 for the quote
+    local highlight_end = end_quote + 6 - 1 -- 6 for ' 󰙎  ' and -1 because the end position is inclusive
 
-      -- Add the highlight
-      vim.api.nvim_buf_add_highlight(ui.info_buf_id, -1, 'BroilHelpCommand', 0, highlight_start, highlight_end)
+    -- Add the highlight
+    vim.api.nvim_buf_add_highlight(ui.info_buf_id, -1, 'BroilHelpCommand', 0, highlight_start, highlight_end)
 
-      -- Move to the next position
-      start_pos = end_quote + 1
-    end
+    -- Move to the next position
+    start_pos = end_quote + 1
   end
 end
 
