@@ -29,6 +29,9 @@ local ui = {
   preview_win_id = nil,
   -- #Tree Edits
   editor = Editor:new(),
+  spinner_frames = { '⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷' },
+  spinner_frame = 1,
+  spinner_timer = nil,
 }
 
 --- scan the file system at dir and create a tree view for the buffer
@@ -211,30 +214,33 @@ ui.set_info_bar_message = function(msg, type)
   if (type == 'verb') then
     icon = '   ';
   elseif (type == 'search') then
-    icon = ' 󱥸 ';
+    icon = ' ' .. ui.spinner_frames[ui.spinner_frame] .. ' ';
+    ui.spinner_frame = (ui.spinner_frame % #ui.spinner_frames) + 1
   elseif (type == 'edits') then
     icon = ' 󱇧 ';
   end
   vim.api.nvim_buf_set_lines(ui.info_buf_id, 0, -1, false, { icon .. msg })
 
   -- Find and highlight each quoted string
-  local start_pos = 1
-  while true do
-    -- Find the next quoted string
-    local start_quote, end_quote = string.find(msg, "'[^']*'", start_pos)
+  if (type ~= 'search') then
+    local start_pos = 1
+    while true do
+      -- Find the next quoted string
+      local start_quote, end_quote = string.find(msg, "'[^']*'", start_pos)
 
-    -- If no more quoted strings were found, break the loop
-    if not start_quote then break end
+      -- If no more quoted strings were found, break the loop
+      if not start_quote then break end
 
-    -- Adjust the positions for the prefix and the quotes themselves
-    local highlight_start = start_quote + 6 -- 6 for ' 󰙎  ' and 1 for the quote
-    local highlight_end = end_quote + 6 - 1 -- 6 for ' 󰙎  ' and -1 because the end position is inclusive
+      -- Adjust the positions for the prefix and the quotes themselves
+      local highlight_start = start_quote + 6 -- 6 for ' 󰙎  ' and 1 for the quote
+      local highlight_end = end_quote + 6 - 1 -- 6 for ' 󰙎  ' and -1 because the end position is inclusive
 
-    -- Add the highlight
-    vim.api.nvim_buf_add_highlight(ui.info_buf_id, -1, 'BroilHelpCommand', 0, highlight_start, highlight_end)
+      -- Add the highlight
+      vim.api.nvim_buf_add_highlight(ui.info_buf_id, -1, 'BroilHelpCommand', 0, highlight_start, highlight_end)
 
-    -- Move to the next position
-    start_pos = end_quote + 1
+      -- Move to the next position
+      start_pos = end_quote + 1
+    end
   end
 end
 
@@ -259,13 +265,8 @@ ui.on_search_input_listener = function()
         ui.set_verb(string.sub(search_buf_text, colon_pos + 1))
       end
       if (previous_search_term ~= ui.search_term) then
-        ui.set_info_bar_message('searching...', 'search')
         utils.debounce("search", function()
           ui.render()
-
-          if (not colon_pos) then
-            ui.set_verb()
-          end
         end, 100)()
       end
     end
@@ -617,6 +618,13 @@ end
 
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score
 ui.render = function(selection_index)
+  if (not ui.spinner_timer) then
+    ui.set_info_bar_message('searching...', 'search')
+    ui.spinner_timer = vim.fn.timer_start(100, function()
+      ui.set_info_bar_message('searching...', 'search')
+    end, { ['repeat'] = -1 })
+  end
+
   local render_async = async.void(function()
     if (ui.open_history[#ui.open_history] ~= ui.open_path) then -- add the path to the history if its not the same
       table.insert(ui.open_history, ui.open_path)
@@ -644,6 +652,14 @@ ui.render = function(selection_index)
     ui.render_start = builder.build_start
     ui.render_end = builder.build_end
     ui.preview_hovered_node()
+
+    utils.debounce("spinner", function()
+      if (ui.spinner_timer) then
+        vim.fn.timer_stop(ui.spinner_timer)
+        ui.spinner_timer = nil
+      end
+      ui.set_info_bar_message()
+    end, 200)()
   end)
 
   async.run(render_async)
