@@ -619,9 +619,9 @@ end
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score
 ui.render = function(selection_index)
   if (not ui.spinner_timer) then
-    ui.set_info_bar_message('searching...', 'search')
+    ui.set_info_bar_message(nil, 'search')
     ui.spinner_timer = vim.fn.timer_start(100, function()
-      ui.set_info_bar_message('searching...', 'search')
+      ui.set_info_bar_message(nil, 'search')
     end, { ['repeat'] = -1 })
   end
 
