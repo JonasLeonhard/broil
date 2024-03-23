@@ -41,6 +41,15 @@ ui.create_tree_window = function()
   vim.b[ui.buf_id].modifiable = true
   vim.wo.signcolumn = 'yes'
   vim.wo.foldmethod = 'indent'
+  vim.cmd([[
+  function! BroilFoldText()
+    let line = getline(v:foldstart)
+    let lines = v:foldend - v:foldstart + 1
+    return line . " ..." . lines . " unlisted"
+  endfunction
+  ]])
+  vim.wo.foldtext = 'BroilFoldText()'
+
   vim.api.nvim_set_option_value('tabstop', 3, { buf = ui.buf_id })
   vim.api.nvim_set_option_value('shiftwidth', 3, { buf = ui.buf_id })
   vim.api.nvim_set_option_value('expandtab', true, { buf = ui.buf_id })
