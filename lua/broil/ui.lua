@@ -40,6 +40,7 @@ ui.create_tree_window = function()
   ui.buf_id = vim.api.nvim_create_buf(false, true)
   vim.b[ui.buf_id].modifiable = true
   vim.wo.signcolumn = 'yes'
+  vim.wo.foldmethod = 'indent'
   vim.api.nvim_set_option_value('tabstop', 3, { buf = ui.buf_id })
   vim.api.nvim_set_option_value('shiftwidth', 3, { buf = ui.buf_id })
   vim.api.nvim_set_option_value('expandtab', true, { buf = ui.buf_id })
