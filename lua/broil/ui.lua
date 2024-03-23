@@ -38,9 +38,6 @@ local ui = {
 ui.create_tree_window = function()
   -- 1. create a tree buffer
   ui.buf_id = vim.api.nvim_create_buf(false, true)
-  vim.b[ui.buf_id].modifiable = true
-  vim.wo.signcolumn = 'yes'
-  vim.wo.foldmethod = 'indent'
   vim.cmd([[
   function! BroilFoldText()
     let line = getline(v:foldstart)
@@ -48,11 +45,14 @@ ui.create_tree_window = function()
     return line . " ..." . lines . " unlisted"
   endfunction
   ]])
-  vim.wo.foldtext = 'BroilFoldText()'
-
+  vim.api.nvim_set_option_value('modifiable', true, { buf = ui.buf_id })
   vim.api.nvim_set_option_value('tabstop', 3, { buf = ui.buf_id })
   vim.api.nvim_set_option_value('shiftwidth', 3, { buf = ui.buf_id })
   vim.api.nvim_set_option_value('expandtab', true, { buf = ui.buf_id })
+
+  vim.api.nvim_set_option_value('signcolumn', "yes", { win = ui.win_id })
+  vim.api.nvim_set_option_value('foldtext', "BroilFoldText()", { win = ui.win_id })
+  vim.api.nvim_set_option_value('foldmethod', "manual", { win = ui.win_id })
 
   -- 2. create a new tree buffer window
   if (ui.win_id ~= nil) then
