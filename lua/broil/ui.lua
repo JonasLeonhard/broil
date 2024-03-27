@@ -189,6 +189,7 @@ ui.preview_hovered_node = function()
         ui.prev_tree:initial_selection()
         builder:destroy()
         vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
+        vim.api.nvim_set_option_value('filetype', nil, { buf = ui.preview_buf_id })
       end)
       async.run(render_async)
     else
