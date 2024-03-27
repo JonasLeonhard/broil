@@ -2,6 +2,7 @@ local BLine = require('broil.bline')
 local config = require('broil.config')
 local fzf = require('fzf_lib')
 local utils = require('broil.utils')
+local cache = require('broil.cache')
 
 local Tree_Builder = {}
 Tree_Builder.__index = Tree_Builder
@@ -28,11 +29,14 @@ function Tree_Builder:new(path, options)
   tree_builder.open_path = path                      -- the original open path
   tree_builder.optimal_lines = options.optimal_lines -- can be nil for infinite search
   tree_builder.pattern = options.pattern
+  tree_builder.current_edits = options.current_edits
 
   tree_builder.fzf_slab = fzf.allocate_slab()
   tree_builder.fzf_pattern_obj = fzf.parse_pattern(options.pattern, config.fzf_case_mode, config.fzf_fuzzy_match)
 
   tree_builder.blines = {}
+
+  local edit = tree_builder.current_edits["0"]
 
   local bline = BLine:new({
     parent_id = nil,
@@ -50,6 +54,7 @@ function Tree_Builder:new(path, options)
     nb_kept_children = 0, -- todo? amount of kept children
     next_child_idx = 1,   -- this is used for building the tree only. It keeps track of the node from wich to continue building the tree after touching the current dir.
     unlisted = 0,         -- amount of unlisted children. This will be set later
+    edit = edit
   })
   tree_builder.root_id = bline.id
   table.insert(tree_builder.blines, bline.id, bline)
@@ -227,7 +232,24 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     return nil
   end
 
-  local path = parent_bline.path .. '/' .. name
+
+  local org_path = parent_bline.path .. '/' .. name
+  local path = org_path
+
+  local cached_id = cache.bline_id_cache[path]
+  local edit
+  -- check if we edited the line
+  if (cached_id) then
+    edit = self.current_edits[tostring(cached_id)]
+
+    if (edit and edit.path_from and edit.path_to) then -- edited, display the edit name & change path
+      path = edit.path_to
+      local path_to_no_slash = edit.path_to:gsub("%/$", "")
+      name = vim.fn.fnamemodify(path_to_no_slash, ':t')
+    end
+  end
+
+  -- return the cached node id if it already exist, cache it otherwise
   local relative_path = string.gsub(path, utils.escape_pattern(self.path .. '/'), '')
   local score = 10000 - parent_bline.depth + 1 -- // we rank less deep entries higher
   local fzf_score = fzf.get_score(relative_path, self.fzf_pattern_obj, self.fzf_slab)
@@ -242,11 +264,11 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     return nil
   end
 
-  local fs_stat = vim.loop.fs_stat(path)
+  local fs_stat = vim.loop.fs_stat(org_path)
 
   return BLine:new({
     parent_id = parent_bline.id,
-    path = path,
+    path = org_path,
     relative_path = relative_path,
     depth = parent_bline.depth + 1,
     name = name,
@@ -259,7 +281,8 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     fzf_score = fzf_score or 0,
     fzf_pos = fzf_pos or {},
     nb_kept_children = 0,
-    unlisted = 0
+    unlisted = 0,
+    edit = edit
   })
 end
 

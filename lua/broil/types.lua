@@ -28,6 +28,7 @@
 --- @field extmark table|nil -> set_extmarks opts
 --- @field file_extension string|nil -> set only after rendering icons
 --- @field fs_stat table|nil
+--- @field edit broil.Edit|nil
 
 --- @class broil.TreeOptions
 --- @field pattern string
@@ -44,6 +45,7 @@
 --- @field staged boolean -- wheter the edit is staged
 --- @field status 'create'|'edit'|'delete'|'queued'|'created'|'edited'|'deleted'
 --- @field job_out string[] -- stdout of the job
+--- @field line string|nil -- how the line was displayed after beeing edited
 
 --- @class broil.Editor
 --- @field edits broil.Edit[]
@@ -63,3 +65,4 @@
 --- @field undo_edit function
 --- @field undo_edit_range function
 --- @field apply_staged_edits function
+--- @field append_new_lines_from_edits function

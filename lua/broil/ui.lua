@@ -174,7 +174,8 @@ ui.preview_hovered_node = function()
         local builder = Tree_Builder:new(bline.path, {
           pattern = '',
           optimal_lines = ui.tree_win.height,
-          maximum_search_time_sec = 0
+          maximum_search_time_sec = 0,
+          current_edits = ui.editor.current_edits,
         })
         local tree_build = builder:build_tree()
         ui.prev_tree = Tree:new({
@@ -183,7 +184,7 @@ ui.preview_hovered_node = function()
           win_id = ui.preview_win_id,
           lines = tree_build.lines,
           highest_score_index = tree_build.highest_score_index,
-          open_path_index = tree_build.open_path_index,
+          open_path_index = tree_build.open_path_index
         })
         ui.prev_tree:render()
         ui.prev_tree:initial_selection()
@@ -666,7 +667,8 @@ ui.render = function(selection_index)
     local builder = Tree_Builder:new(ui.open_path, {
       pattern = ui.search_term,
       optimal_lines = ui.tree_win.height,
-      maximum_search_time_sec = 1
+      maximum_search_time_sec = 1,
+      current_edits = ui.editor.current_edits,
     })
     local tree_build = builder:build_tree()
     ui.tree = Tree:new({
@@ -675,11 +677,13 @@ ui.render = function(selection_index)
       win_id = ui.win_id,
       lines = tree_build.lines,
       highest_score_index = tree_build.highest_score_index,
-      open_path_index = tree_build.open_path_index,
+      open_path_index = tree_build.open_path_index
     })
     ui.tree:render()
     ui.tree:initial_selection(selection_index)
     builder:destroy()
+    ui.editor:append_new_lines_from_edits(ui.tree)
+    ui.editor:handle_edits(ui.tree)
 
     ui.open_dir = builder.path
     ui.render_start = builder.build_start

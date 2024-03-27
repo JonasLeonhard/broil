@@ -121,6 +121,7 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
         id = id,
         path_from = path_from,
         path_to = path_to,
+        line = line,
         staged = false,
         status = status,
         job_out = nil
@@ -132,16 +133,26 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
 end
 
 function Editor:build_deleted_and_remove_children(bline, tree)
-  local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
-  -- check if a line with the bid exists after editing
   local current_line_exists = false
+  local new_line = nil
+  local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
+
+  -- check if the line was deleted in an edit. if so remove it
+  -- check if a line with the bid exists after editing
+  local path_id = nil
   for _, line in ipairs(current_lines) do
-    local path_id = utils.get_bid_by_match(line)
+    if (bline.edit and bline.edit.status == 'delete') then
+      tree:remove_children({ bline.id })
+    end
+
+    path_id = utils.get_bid_by_match(line)
     if (path_id == bline.id) then
       current_line_exists = true
+      new_line = line
       break
     end
   end
+
 
   -- if not, we deleted it
   if (not current_line_exists) then
@@ -159,6 +170,7 @@ function Editor:build_deleted_and_remove_children(bline, tree)
       path_to = nil,
       staged = false,
       status = 'delete',
+      line = new_line,
       job_out = nil
     }
   end
@@ -173,9 +185,9 @@ function Editor:highlight_new_and_modified(index, line, tree)
   local bline = tree:find_by_id(path_id)
 
   if (bline) then
-    local edited = self.current_edits[tostring(bline.id)]
+    local edit = self.current_edits[tostring(bline.id)]
 
-    if (edited) then
+    if (edit) then
       -- highlight the line as edited
       vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
         sign_text = '┃',
@@ -525,6 +537,29 @@ function Editor:apply_staged_edits(callback)
           self:render_edits()
           callback()
         end))
+      end
+    end
+  end
+end
+
+function Editor:append_new_lines_from_edits(tree)
+  local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
+  for _, edit in pairs(self.current_edits) do
+    if (edit.status == 'create') then
+      local path_to = edit.path_to
+      local path_to_no_trailing_slash = path_to:gsub("/$", "")
+      local path_to_dir = vim.fn.fnamemodify(path_to_no_trailing_slash, ':h')
+
+      for i, line in ipairs(current_lines) do
+        local path_id = utils.get_bid_by_match(line)
+        local bline = tree:find_by_id(path_id)
+
+        if (bline and bline.path == path_to_dir) then
+          local indent = string.rep(' ', bline.depth * 3) .. string.rep(' ', 6)
+          local name = vim.fn.fnamemodify(path_to, ':t')
+          vim.api.nvim_buf_set_lines(tree.buf_id, i, i, false, { indent .. name })
+          break
+        end
       end
     end
   end
