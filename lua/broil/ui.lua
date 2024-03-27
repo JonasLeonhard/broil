@@ -15,6 +15,7 @@ local ui = {
   open_history = {}, -- we can reset to this later
   buf_id = nil,
   win_id = nil,
+  tree = nil,
   tree_win = {
     height = math.ceil(vim.o.lines * 0.6) - 1, -- 60% height
   },
@@ -27,6 +28,7 @@ local ui = {
   -- #Preview
   preview_buf_id = nil,
   preview_win_id = nil,
+  preview_tree = nil,
   -- #Tree Edits
   editor = Editor:new(),
   spinner_frames = { '⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷' },
@@ -139,6 +141,8 @@ ui.create_preview_window = function()
   ui.preview_win_id = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(ui.preview_win_id, ui.preview_buf_id)
 
+  vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
+
   -- set the content of the preview window to the hovered node
   vim.api.nvim_create_autocmd({ "CursorMoved" }, {
     buffer = ui.buf_id,
@@ -153,6 +157,8 @@ ui.preview_hovered_node = function()
     if (not ui.win_id) then
       return
     end
+    vim.api.nvim_set_option_value('modifiable', true, { buf = ui.preview_buf_id })
+
     local cursor_pos = vim.api.nvim_win_get_cursor(ui.win_id)
     local cursor_y = cursor_pos[1]
     local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, cursor_y - 1, cursor_y, false)[1]
@@ -164,7 +170,27 @@ ui.preview_hovered_node = function()
     end
 
     if (bline.file_type == "directory") then
-      vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false, { "Directory: " .. bline.path })
+      local render_async = async.void(function()
+        local builder = Tree_Builder:new(bline.path, {
+          pattern = '',
+          optimal_lines = ui.tree_win.height,
+          maximum_search_time_sec = 0
+        })
+        local tree_build = builder:build_tree()
+        ui.prev_tree = Tree:new({
+          pattern = '',
+          buf_id = ui.preview_buf_id,
+          win_id = ui.preview_win_id,
+          lines = tree_build.lines,
+          highest_score_index = tree_build.highest_score_index,
+          open_path_index = tree_build.open_path_index,
+        })
+        ui.prev_tree:render()
+        ui.prev_tree:initial_selection()
+        builder:destroy()
+        vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
+      end)
+      async.run(render_async)
     else
       -- check if file is too large to preview
       local mb_filesize = utils.bytes_to_megabytes(bline.fs_stat.size)
@@ -188,6 +214,7 @@ ui.preview_hovered_node = function()
         vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false, lines)
         local detect_filetype = vim.filetype.match({ buf = ui.preview_buf_id, filename = bline.name })
         vim.api.nvim_set_option_value('filetype', detect_filetype, { buf = ui.preview_buf_id })
+        vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
       end))
     end
   end, 200)()
