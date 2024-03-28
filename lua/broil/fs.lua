@@ -58,12 +58,6 @@ function Filesystem:create(path_to, callback)
       end,
     }):start()
   else
-    local args = {}
-    for _, arg in ipairs(config.touch_command.args) do
-      table.insert(args, arg)
-    end
-    table.insert(args, path_to)
-
     Job:new({
       command = config.shell,
       args = { config.shell_exec_flag, config.touch_command .. ' ' .. path_to },
