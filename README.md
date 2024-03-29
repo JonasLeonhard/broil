@@ -2,12 +2,11 @@
 Navigate Directories like <a href="https://github.com/Canop/broot" target="_blank">Broot</a>,
 and edit like <a href="https://github.com/stevearc/oil.nvim">Oil</a>.
 
-
-![Open and search](https://github.com/JonasLeonhard/broil/assets/54074887/f14fb934-75df-4ab8-91ec-88380b60fd1d)
-
 # Features
 
+## Tree View & Fuzzy Search
 Fuzzy search using using <a href="https://github.com/nvim-telescope/telescope-fzf-native.nvim?tab=readme-ov-file#telescope-fzf-nativenvim">telescope-fzf-native</a>:
+![Open and search](https://github.com/JonasLeonhard/broil/assets/54074887/ba76f1d5-ed9c-40c4-991f-e32201e95f99)
 
 Broil supports the fzf syntax of telescope-fzf-native:
 ...From their readme: **fzf-native** is a `c` port of **[fzf][fzf]**. It only covers the algorithm and
@@ -26,11 +25,11 @@ is supported:
 | `!^music` | inverse-prefix-exact-match | Items that do not start with `music` |
 | `!.mp3$`  | inverse-suffix-exact-match | Items that do not end with `.mp3`    |
 
-## Syncing:
-- create
-- move
-- rename
-- delete
+## Cross Directory Buffer Editing:
+- create, move, rename & delete
+...by just editing the current tree view buffer:
+  
+  
 - terminal command
 
 ## Motions:
