@@ -2,6 +2,8 @@
 Navigate Directories like <a href="https://github.com/Canop/broot" target="_blank">Broot</a>,
 and edit like <a href="https://github.com/stevearc/oil.nvim">Oil</a>.
 
+![Open and search](https://github.com/JonasLeonhard/broil/assets/54074887/f14fb934-75df-4ab8-91ec-88380b60fd1d)
+
 # Features
 
 ## Syncing:
