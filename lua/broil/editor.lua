@@ -303,9 +303,9 @@ function Editor:render_edits()
 end
 
 function Editor:render_edit(line_number, edit)
-  local line_status = 'EDIT      '
+  local line_status = 'MOVE      '
   if (edit.status == 'edited') then
-    line_status = 'EDITED    '
+    line_status = 'MOVED     '
   elseif (edit.status == 'delete') then
     line_status = 'DELETE    '
   elseif (edit.status == 'deleted') then
