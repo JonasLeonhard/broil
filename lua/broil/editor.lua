@@ -39,6 +39,9 @@ function Editor:handle_edits(tree)
   for index, bline in ipairs(tree.lines) do
     self:highlight_deleted(index, bline, current_lines, tree)
   end
+
+  current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
+  self:remove_new_edits_if_removed(tree, current_lines)
 end
 
 --- @param line string rendered line of the tree
@@ -106,17 +109,25 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     end
 
 
+    local id = ('+' .. index)
+    if (path_id) then
+      id = tostring(path_id)
+    end
+    if (path_from) then
+      path_from = path_from:gsub('\n', '')
+    end
+    if (path_to) then
+      path_to = path_to:gsub('\n', '')
+    end
+
     if (path_from ~= path_to) then
-      local id = ('+' .. index)
-      if (path_id) then
-        id = tostring(path_id)
-      end
       local status = 'edit'
       if (not path_from) then
         status = 'create'
       elseif (not path_to) then
         status = 'delete'
       end
+
       self.current_edits[id] = {
         id = id,
         path_from = path_from,
@@ -126,6 +137,8 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
         status = status,
         job_out = nil
       }
+    else
+      self.current_edits[id] = nil
     end
   end
 
@@ -559,6 +572,39 @@ function Editor:append_new_lines_from_edits(tree)
           local name = vim.fn.fnamemodify(path_to, ':t')
           vim.api.nvim_buf_set_lines(tree.buf_id, i, i, false, { indent .. name })
           break
+        end
+      end
+    end
+  end
+end
+
+function Editor:remove_new_edits_if_removed(tree, current_lines)
+  for _, edit in pairs(self.current_edits) do
+    if (edit.status == 'create') then
+      -- check if current_lines contains the edit, if not. Remove it.
+      local found = false
+      for _, line in ipairs(current_lines) do
+        if (line:find(edit.line)) then
+          found = true
+          break
+        end
+      end
+
+      if (not found) then
+        local edit_path_to_dir = vim.fn.fnamemodify(edit.path_to:gsub('%/$', ''), ':h')
+        -- check if we could have rendered the edit by moving upwards through current lines and checking if the path of the edit would have been rendered
+        local could_have_been_rendered = false
+        for _, line in ipairs(current_lines) do
+          local path_id = utils.get_bid_by_match(line)
+          local bline = tree:find_by_id(path_id)
+          if (bline and bline.path == edit_path_to_dir) then
+            could_have_been_rendered = true
+            break
+          end
+        end
+
+        if (could_have_been_rendered) then
+          self.current_edits[edit.id] = nil
         end
       end
     end
