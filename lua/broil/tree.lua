@@ -123,7 +123,7 @@ end
 
 function Tree:render_icon(line)
   local line_without_whitespace = line:gsub("%s+", "")
-  local line_without_path_id = line_without_whitespace:gsub("%[%d+%]$", "")
+  local line_without_path_id = line_without_whitespace:gsub("%[?.%d+%]$", "")
 
   local line_ends_with_slash = line_without_path_id:sub(-1) == '/'
   if (line_ends_with_slash) then
