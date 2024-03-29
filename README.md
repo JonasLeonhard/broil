@@ -32,9 +32,9 @@ is supported:
 
 https://github.com/JonasLeonhard/broil/assets/54074887/2bd63166-434f-4a2c-8e22-539e2ce868d2
 
+- run any terminal command like touch, mkdir, ls, chmod and see the output
 
-  
-- terminal command
+https://github.com/JonasLeonhard/broil/assets/54074887/18c71a52-4862-4e93-9082-d288853f71c2
 
 ## Motions:
 - gg and g
