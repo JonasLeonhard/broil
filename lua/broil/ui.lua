@@ -701,6 +701,7 @@ ui.render = function(selection_index)
       end
       ui.set_info_bar_message()
     end, 200)()
+    vim.api.nvim_win_set_height(ui.search_win_id, 1)
   end)
 
   async.run(render_async)
