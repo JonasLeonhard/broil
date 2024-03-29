@@ -2,9 +2,29 @@
 Navigate Directories like <a href="https://github.com/Canop/broot" target="_blank">Broot</a>,
 and edit like <a href="https://github.com/stevearc/oil.nvim">Oil</a>.
 
+
 ![Open and search](https://github.com/JonasLeonhard/broil/assets/54074887/f14fb934-75df-4ab8-91ec-88380b60fd1d)
 
 # Features
+
+Fuzzy search using using <a href="https://github.com/nvim-telescope/telescope-fzf-native.nvim?tab=readme-ov-file#telescope-fzf-nativenvim">telescope-fzf-native</a>:
+
+Broil supports the fzf syntax of telescope-fzf-native:
+...From their readme: **fzf-native** is a `c` port of **[fzf][fzf]**. It only covers the algorithm and
+implements few functions to support calculating the score.
+
+This means that the [fzf syntax](https://github.com/junegunn/fzf#search-syntax)
+is supported:
+
+| Token     | Match type                 | Description                          |
+| --------- | -------------------------- | ------------------------------------ |
+| `sbtrkt`  | fuzzy-match                | Items that match `sbtrkt`            |
+| `'wild`   | exact-match (quoted)       | Items that include `wild`            |
+| `^music`  | prefix-exact-match         | Items that start with `music`        |
+| `.mp3$`   | suffix-exact-match         | Items that end with `.mp3`           |
+| `!fire`   | inverse-exact-match        | Items that do not include `fire`     |
+| `!^music` | inverse-prefix-exact-match | Items that do not start with `music` |
+| `!.mp3$`  | inverse-suffix-exact-match | Items that do not end with `.mp3`    |
 
 ## Syncing:
 - create
