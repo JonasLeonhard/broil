@@ -28,6 +28,17 @@ function utils.get_bid_by_match(line)
   return res
 end
 
+function utils.get_new_id_by_match(line)
+  if (line == nil) then return nil end
+
+  local id_str = line:match("%[%+(%d+)%]$")
+
+  local ok, res = pcall(tonumber, id_str)
+  if not ok then return nil end
+
+  return res
+end
+
 function utils.get_edit_id_by_match(line)
   if (line == nil) then return nil end
 

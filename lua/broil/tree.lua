@@ -98,7 +98,8 @@ function Tree:render()
   -- conceal ids at end of the line
   if (self.win_id) then
     vim.api.nvim_win_call(self.win_id, function()
-      vim.fn.matchadd('Conceal', [[\[\d\+\]$]])
+      vim.fn.matchadd('Conceal', [[\[\d\+\]$]])  -- eg: [13]
+      vim.fn.matchadd('Conceal', [[\[.\d\+\]$]]) -- eg: [+13]
     end)
   end
 

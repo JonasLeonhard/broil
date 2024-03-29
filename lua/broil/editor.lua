@@ -17,6 +17,8 @@ function Editor:new()
 
   self.buf_id = vim.api.nvim_create_buf(false, true)
   self.win_id = nil
+
+  self.new_edits_counter = 0
   return editor
 end
 
@@ -85,7 +87,7 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     end
 
     -- remove leading whitespace before first char, remove path_id from the end, remove trailing slash for dirs
-    local edited_line_w_trailing_slash = line:gsub("^%s*", ""):gsub("%[%d+%]$", "")
+    local edited_line_w_trailing_slash = line:gsub("^%s*", ""):gsub("%[%d+%]$", ""):gsub("%[%+%d+%]$", "")
     local edited_line, replaced_trailing_slash_count = edited_line_w_trailing_slash:gsub("%/$", "")
     local edited_line_name = vim.fn.fnamemodify(edited_line, ':t')
 
@@ -109,10 +111,19 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     end
 
 
-    local id = ('+' .. index)
-    if (path_id) then
-      id = tostring(path_id)
+    local id = tostring(path_id)
+    if (not path_id) then
+      local new_id = utils.get_new_id_by_match(line)
+      if (new_id) then
+        id = '+' .. new_id
+      end
+      if (not new_id) then
+        id = ('+' .. self.new_edits_counter)
+        vim.api.nvim_buf_set_lines(tree.buf_id, index - 1, index, false, { line .. '[' .. id .. ']' })
+        self.new_edits_counter = self.new_edits_counter + 1
+      end
     end
+
     if (path_from) then
       path_from = path_from:gsub('\n', '')
     end
@@ -570,7 +581,7 @@ function Editor:append_new_lines_from_edits(tree)
         if (bline and bline.path == path_to_dir) then
           local indent = string.rep(' ', bline.depth * 3) .. string.rep(' ', 6)
           local name = vim.fn.fnamemodify(path_to, ':t')
-          vim.api.nvim_buf_set_lines(tree.buf_id, i, i, false, { indent .. name })
+          vim.api.nvim_buf_set_lines(tree.buf_id, i, i, false, { indent .. name .. '[' .. edit.id .. ']' })
           break
         end
       end
@@ -581,10 +592,10 @@ end
 function Editor:remove_new_edits_if_removed(tree, current_lines)
   for _, edit in pairs(self.current_edits) do
     if (edit.status == 'create') then
-      -- check if current_lines contains the edit, if not. Remove it.
+      -- check if current_lines contains the created new line, if not. Remove it.
       local found = false
       for _, line in ipairs(current_lines) do
-        if (line:find(edit.line)) then
+        if (line == edit.line) then
           found = true
           break
         end
