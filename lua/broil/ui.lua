@@ -297,6 +297,8 @@ ui.on_search_input_listener = function()
 
       if (colon_pos) then
         ui.set_verb(string.sub(search_buf_text, colon_pos + 1))
+      else
+        ui.set_verb()
       end
       if (previous_search_term ~= ui.search_term) then
         utils.debounce("search", function()
@@ -420,9 +422,9 @@ end
 --- Opens the currently selected tree node (Tree.selected_render_index)
 --- It enters the node if its a dir,
 --- otherwise it opens the file in a new buffer
-ui.open_selected_node_or_run_verb = function()
+ui.open_selected_node_or_run_verb = function(just_open)
   -- if we have a verb, we execute it instead of opening the node
-  if (ui.verb ~= nil and ui.verb ~= '') then
+  if (ui.verb ~= nil and ui.verb ~= '' and not just_open) then
     return ui.run_current_verb()
   end
 

@@ -36,7 +36,9 @@ keymap.attach = function()
 
   keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, ui.open_selected_node_or_run_verb,
     { desc = 'Open selected node' })
-  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, ui.open_selected_node_or_run_verb,
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_selected_node2, function()
+      ui.open_selected_node_or_run_verb(true)
+    end,
     { desc = 'Open selected node' })
 
   keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_parent_dir, ui.open_parent_dir,

@@ -1,33 +1,71 @@
 # Broil = Broot + Oil
+Navigate Directories like <a href="https://github.com/Canop/broot" target="_blank">Broot</a>,
+and edit like <a href="https://github.com/stevearc/oil.nvim">Oil</a>.
 
+# Features
 
-# TODOs:
-
-# Refactor / Fix :
-- save node path as plenary paths more functions to handle paths eg: to make paths relative. https://github.com/nvim-lua/plenary.nvim/blob/4f71c0c4a196ceb656c824a70792f3df3ce6bb6d/lua/plenary/path.lua#L92 
-- remove tree.filtered_nodes
-- stop async tree:build coroutine when running build again. Or atleast dont make it rerender twice (maybe add a build counter increment?)
-- render tree like broot ui with virtual text or extmarks?
-- fuzzy highlight what matched
-- display directory children like broot "x unlisted..."
-
-# Motions:
-- <C-u> and <C-d> motion
-- <C-g> goto root, top, bot, parent_node...
-
-# Infos:
-- after opening, select current file
-
-- select best fuzzy find hightlight with score: maybe use https://github.com/nvim-telescope/telescope-fzf-native.nvim ?
-- better tree visualization
-- help bar above search like in broot
-- show file chmod, size
-- order by size, name, permissions, owner, last-edited ...
-- open dir in terminal?
-- git integration (edited, changed...)
-
-# Syncing:
+## Syncing:
 - create
 - move
 - rename
 - delete
+- terminal command
+
+## Motions:
+- gg and g
+- C-j, C-k, j, k - movement
+- C-l or CR - Open selected
+- C-h - go dir up
+
+## Settings
+- Sorting by dir_first (TODO)
+- Sorting by files_first (TODO)
+- Sorting alphabetically (TODO)
+- Sorting by size (TODO)
+
+# Configuration
+
+<details>
+  <summary>Lazy</summary>
+
+```lua
+return {
+  'JonasLeonhard/broil',
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "nvim-tree/nvim-web-devicons",
+    {
+      'nvim-telescope/telescope-fzf-native.nvim',
+      cond = function()
+        return vim.fn.executable 'make' == 1
+      end,
+      build =
+      'make'
+    }
+  },
+  opts = {
+    rm_command = 'rm', -- optional...(default 'rm'). you could use a trash command here. Or rm --trash for nushell...
+    -- ... you can find more opts in lua/broil/config.lua
+  },
+  keys = {
+    {
+      '<leader>o',
+      "<cmd>lua require('broil').open()<cr>", -- opens current %:h or cwd by default
+      desc = 'Broil open',
+    },
+    {
+      '<leader>O',
+      "<cmd>lua require('broil').open(vim.fn.getcwd())<cr>",
+      desc = 'Broil open cwd',
+    },
+  },
+  enabled = true
+}
+```
+</details>
+
+# Contributing
+
+# License
+
+
