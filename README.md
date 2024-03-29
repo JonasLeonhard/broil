@@ -6,7 +6,8 @@ and edit like <a href="https://github.com/stevearc/oil.nvim">Oil</a>.
 
 ## Tree View & Fuzzy Search
 Fuzzy search using using <a href="https://github.com/nvim-telescope/telescope-fzf-native.nvim?tab=readme-ov-file#telescope-fzf-nativenvim">telescope-fzf-native</a>:
-![Open and search](https://github.com/JonasLeonhard/broil/assets/54074887/ba76f1d5-ed9c-40c4-991f-e32201e95f99)
+
+https://github.com/JonasLeonhard/broil/assets/54074887/5a9400a9-624c-4c60-9740-5b9e7082e85c
 
 Broil supports the fzf syntax of telescope-fzf-native:
 ...From their readme: **fzf-native** is a `c` port of **[fzf][fzf]**. It only covers the algorithm and
