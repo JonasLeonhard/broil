@@ -28,7 +28,10 @@ is supported:
 ## Cross Directory Buffer Editing:
 - create, move, rename & delete
 ...by just editing the current tree view buffer:
-  
+
+https://github.com/JonasLeonhard/broil/assets/54074887/2bd63166-434f-4a2c-8e22-539e2ce868d2
+
+
   
 - terminal command
 
