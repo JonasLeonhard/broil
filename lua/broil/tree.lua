@@ -59,15 +59,6 @@ function Tree:render()
     -- Render the line
     vim.api.nvim_buf_set_lines(self.buf_id, index - 1, index - 1, false, { rendered_line })
 
-    -- Render Icon highlights
-    if (bline.file_type == 'directory') then
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilDirLine', index - 1, 0, -1)
-    end
-
-    if (bline.line_type == 'pruning') then
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilPruningLine', index - 1, 0, -1)
-    end
-
     -- Render relative path dir parts
     if (self.pattern ~= '' and bline.fzf_pos) then
       local end_dir
@@ -131,7 +122,7 @@ function Tree:render_icon(line)
   end
 
   -- TODO: line ends with unlisted
-  local line_ends_with_unlisted = line_without_path_id:match(".*%[unlisted%]$")
+  local line_ends_with_unlisted = line_without_path_id:match(".*unlisted$")
   if (line_ends_with_unlisted) then
     return '󱞃', '#a6adc8', 'pruning'
   end
@@ -219,6 +210,15 @@ function Tree:draw_line_extmarks(index, line, current_lines)
     bline.file_extension = file_extension
   end
   vim.api.nvim_command('highlight BroilTreeIcons_' .. file_extension .. ' guifg=' .. color) -- highlight Icon in color
+
+  -- Render Icon highlights
+  if (file_extension == 'directory') then
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilDirLine', index - 1, 0, -1)
+  end
+
+  if (file_extension == 'pruning') then
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.highlight_ns_id, 'BroilPruningLine', index - 1, 0, -1)
+  end
 
   vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0, {
     virt_text = { { tree_lines, 'BroilTreeLines' }, { icon, 'BroilTreeIcons_' .. file_extension } },

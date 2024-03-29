@@ -433,19 +433,21 @@ ui.open_selected_node_or_run_verb = function()
     return
   end
 
-  local node = ui.tree.lines[cursor_y]
+  local current_line = vim.api.nvim_buf_get_lines(ui.buf_id, cursor_y - 1, cursor_y, false)[1]
+  local bid = utils.get_bid_by_match(current_line)
+  local bline = ui.tree:find_by_id(bid)
 
-  if (not node) then
+  if (not bline) then
     return
   end
 
-  if (node.file_type == "directory") then
-    ui.open_path = node.path
+  if (bline.file_type == "directory") then
+    ui.open_path = bline.path
     ui.set_search("")
     ui.render()
   else
     ui.close()
-    vim.api.nvim_command('edit ' .. node.path)
+    vim.api.nvim_command('edit ' .. bline.path)
     vim.api.nvim_command('stopinsert')
   end
 end

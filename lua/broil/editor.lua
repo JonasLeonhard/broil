@@ -56,7 +56,7 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     local path_to = nil
 
     if (bline and bline.line_type == 'pruning') then
-      goto continue
+      return
     end
 
     if (bline) then
@@ -152,11 +152,13 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
       self.current_edits[id] = nil
     end
   end
-
-  ::continue::
 end
 
 function Editor:build_deleted_and_remove_children(bline, tree)
+  if (not bline or bline.line_type == 'pruning') then
+    return
+  end
+
   local current_line_exists = false
   local new_line = nil
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
@@ -232,6 +234,10 @@ function Editor:highlight_new_and_modified(index, line, tree)
 end
 
 function Editor:highlight_deleted(index, bline, current_lines, tree)
+  if (not bline or bline.line_type == 'pruning') then
+    return
+  end
+
   -- check if a line with the bid exists after editing
   local current_line_exists = false
   for _, line in ipairs(current_lines) do
