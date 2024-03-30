@@ -4,6 +4,7 @@ Tree.__index = Tree
 local webdevicons = require('nvim-web-devicons')
 local utils = require('broil.utils')
 local cache = require('broil.cache')
+local config = require('broil.config')
 
 --- @param options broil.TreeOptions
 function Tree:new(options)
@@ -226,6 +227,26 @@ function Tree:draw_line_extmarks(index, line, current_lines)
     invalidate = true,
   })
   self.mark_virt_text[index] = tree_lines .. icon
+
+  -- search_mode 1 == grep
+  if (config.search_mode == 1 and bline and #bline.grep_results > 0) then
+    local first_result = bline.grep_results[1]
+    -- trim to max_length of 20
+    local line_start = first_result.line:sub(1, first_result.column - 2):sub(-20)
+    local line_highlight = first_result.line:sub(first_result.column - 1, first_result.column_end)
+    local line_end = first_result.line:sub(first_result.column_end + 1):sub(1, 20)
+
+    vim.api.nvim_buf_set_extmark(self.buf_id, self.ext_marks_ns_id, index - 1, 0, {
+      virt_text = {
+        { first_result.row .. ':' .. first_result.column .. '|x' .. #bline.grep_results, 'BroilInfo' },
+        { '…' .. line_start, 'BroilInactive' },
+        { line_highlight, 'BroilSearchTerm' },
+        { line_end .. '…', 'BroilInactive' }
+      },
+      virt_text_pos = 'eol',
+      invalidate = true,
+    })
+  end
 end
 
 --- @param selection_index number|nil the inistal index to select. Nil = select the highest score

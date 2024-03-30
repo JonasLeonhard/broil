@@ -217,6 +217,10 @@ ui.preview_hovered_node = function()
         local detect_filetype = vim.filetype.match({ buf = ui.preview_buf_id, filename = bline.name })
         vim.api.nvim_set_option_value('filetype', detect_filetype, { buf = ui.preview_buf_id })
         vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
+        if (config.search_mode == 1 and #bline.grep_results > 0) then
+          local first_result = bline.grep_results[1]
+          pcall(vim.api.nvim_win_set_cursor, ui.preview_win_id, { first_result.row, first_result.column })
+        end
       end))
     end
   end, 200)()
@@ -451,6 +455,11 @@ ui.open_selected_node_or_run_verb = function(just_open)
     ui.close()
     vim.api.nvim_command('edit ' .. bline.path)
     vim.api.nvim_command('stopinsert')
+
+    if (config.search_mode == 1 and #bline.grep_results > 0) then
+      local first_result = bline.grep_results[1]
+      pcall(vim.api.nvim_win_set_cursor, 0, { first_result.row, first_result.column })
+    end
   end
 end
 

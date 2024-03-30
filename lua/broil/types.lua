@@ -29,6 +29,7 @@
 --- @field file_extension string|nil -> set only after rendering icons
 --- @field fs_stat table|nil
 --- @field edit broil.Edit|nil
+--- @field grep_results table -> grep results when using search_mode grep
 
 --- @class broil.TreeOptions
 --- @field pattern string

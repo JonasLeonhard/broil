@@ -52,6 +52,7 @@ function Tree_Builder:new(path, options)
     nb_kept_children = 0, -- todo? amount of kept children
     next_child_idx = 1,   -- this is used for building the tree only. It keeps track of the node from wich to continue building the tree after touching the current dir.
     unlisted = 0,         -- amount of unlisted children. This will be set later
+    grep_results = {},
   })
 
   local edit = tree_builder.current_edits[bline.id]
@@ -252,12 +253,32 @@ function Tree_Builder:create_bline(parent_bline, name, type)
   -- return the cached node id if it already exist, cache it otherwise
   local relative_path = string.gsub(path, utils.escape_pattern(self.path .. '/'), '')
   local score = 10000 - parent_bline.depth + 1 -- // we rank less deep entries higher
-  local fzf_score = fzf.get_score(relative_path, self.fzf_pattern_obj, self.fzf_slab)
-  local fzf_pos = fzf.get_pos(relative_path, self.fzf_pattern_obj, self.fzf_slab)
-  local has_match = fzf_score > 0
 
-  if (fzf_score > 0) then
+  local has_match = false
+
+  -- search_mode 0 = 'fuzzy_find'
+  local fzf_score, fzf_pos
+  if (config.search_mode == 0) then
+    fzf_score = fzf.get_score(relative_path, self.fzf_pattern_obj, self.fzf_slab)
+    fzf_pos = fzf.get_pos(relative_path, self.fzf_pattern_obj, self.fzf_slab)
+    has_match = fzf_score > 0
+  end
+  if (fzf_score and fzf_score > 0) then
     score = score + fzf_score + 10 -- // we dope direct matches to compensate for depth doping of parent folders
+  end
+
+  -- search_mode 1 = 'grep'
+  local grep_results = nil
+  if (config.search_mode == 1) then
+    if (self.pattern == '') then
+      has_match = true
+    elseif (type == 'file') then
+      grep_results = self:grep(org_path, self.pattern)
+      if (#grep_results > 0) then
+        has_match = true
+        score = score + (#grep_results * 10) + 10
+      end
+    end
   end
 
   if (type == 'file' and not has_match) then
@@ -282,7 +303,8 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     fzf_pos = fzf_pos or {},
     nb_kept_children = 0,
     unlisted = 0,
-    edit = edit
+    edit = edit,
+    grep_results = grep_results or {},
   })
 end
 
@@ -432,6 +454,26 @@ function Tree_Builder:destroy()
   if (self.fzf_pattern_obj) then
     fzf.free_pattern(self.fzf_pattern_obj)
   end
+end
+
+function Tree_Builder:grep(path, pattern)
+  local file = io.open(path, "r")
+  if not file then return nil end
+
+  local row = 0
+  local grep_results = {}
+
+  for line in file:lines() do
+    row = row + 1
+    local start, c_end = line:find(pattern)
+    if start then -- if match found
+      local column = start + 1
+      table.insert(grep_results, { row = row, column = column, column_end = c_end, line = line })
+    end
+  end
+  file:close()
+
+  return grep_results
 end
 
 return Tree_Builder
