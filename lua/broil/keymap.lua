@@ -87,6 +87,23 @@ keymap.attach = function()
         end, 100)()
       end)
     end)
+
+  -- Config
+  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_config_float, ui.open_config_float)
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_config_float, ui.open_config_float)
+  keymap.map(config.buf_id, { 'n', 'i' }, config.mappings.close, ui.close_config_float)
+  keymap.map(config.buf_id, { 'n', 'i' }, 's', function()
+    config:toggle_sort()
+  end)
+  keymap.map(config.buf_id, { 'n', 'i' }, 'h', function()
+    config:toggle_show_hidden()
+  end)
+  keymap.map(config.buf_id, { 'n', 'i' }, 'C', function()
+    config:toggle_fuzzy_case_mode()
+  end)
+  keymap.map(config.buf_id, { 'n', 'i' }, 'F', function()
+    config:toggle_match()
+  end)
 end
 
 return keymap

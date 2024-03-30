@@ -580,7 +580,14 @@ ui.on_close_listener = function()
   vim.api.nvim_create_autocmd({ "WinClosed" }, {
     buffer = ui.editor.buf_id,
     callback = function()
-      ui.editor:close_edits_float()
+      ui.close_edits_float()
+    end
+  })
+
+  vim.api.nvim_create_autocmd({ "WinClosed" }, {
+    buffer = config.buf_id,
+    callback = function()
+      ui.close_config_float()
     end
   })
 end
@@ -632,7 +639,7 @@ ui.set_search = function(search_term)
 end
 
 ui.open_edits_float = function()
-  ui.editor:open_edits_float(ui.win_id, ui.buf_id)
+  ui.editor:open_edits_float(ui.win_id)
   ui.set_info_bar_message(
     "Edits: '" ..
     config.mappings.stage_edit ..
@@ -652,6 +659,19 @@ end
 ui.close_edits_float = function()
   ui.editor:close_edits_float()
   ui.set_info_bar_message()
+end
+
+ui.open_config_float = function()
+  config:open_config_float(ui.win_id)
+  ui.set_info_bar_message(
+    "Type: '<KEY>' to toggle setting. ESC or <C-q> to close."
+  )
+end
+
+ui.close_config_float = function()
+  config:close_config_float()
+  ui.set_info_bar_message()
+  ui.render()
 end
 
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score

@@ -323,13 +323,15 @@ function Tree_Builder:as_tree(bline_ids)
       local sort_prefix = ''
       local bline = bid_lines[bid]
 
-      if (config.sort_option == 'TypeDirsFirst') then
+      if (config.sort_option == 0) then
+        -- 0 = 'TypeDirsFirst'
         if (bline.file_type == 'directory') then
           sort_prefix = '              '
         else
           sort_prefix = vim.fn.expand(bline.path .. ':e') -- path_extension
         end
       else
+        -- 1 = 'TypeDirsLast'
         if (bline.file_type == 'directory') then
           sort_prefix = '~~~~~~~~~~~~~~'
         else
