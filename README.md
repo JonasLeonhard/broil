@@ -36,6 +36,10 @@ https://github.com/JonasLeonhard/broil/assets/54074887/2bd63166-434f-4a2c-8e22-5
 
 https://github.com/JonasLeonhard/broil/assets/54074887/18c71a52-4862-4e93-9082-d288853f71c2
 
+## Content Search
+
+https://github.com/JonasLeonhard/broil/assets/54074887/850e35d5-81e7-411e-8ad1-7b21f0331885
+
 ## Motions:
 - gg and g
 - C-j, C-k, j, k - movement
