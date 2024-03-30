@@ -47,10 +47,17 @@ https://github.com/JonasLeonhard/broil/assets/54074887/850e35d5-81e7-411e-8ad1-7
 - C-h - go dir up
 
 ## Settings
-- Sorting by dir_first (TODO)
-- Sorting by files_first (TODO)
+- Change the search mode (fuzzy searching via file/dir names, or by file contents)
+- show / hide hidden dot files and directories
+- Sorting by dir_first
+- Sorting by files_first
 - Sorting alphabetically (TODO)
 - Sorting by size (TODO)
+- Fuzzy case mode (smart_case, ignore_case, respect_case)
+- Toggle Fuzzy Search
+
+https://github.com/JonasLeonhard/broil/assets/54074887/02f523ba-8964-4785-8bff-9d2f809bb63e
+
 
 # Configuration
 
