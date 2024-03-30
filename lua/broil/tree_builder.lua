@@ -36,8 +36,6 @@ function Tree_Builder:new(path, options)
 
   tree_builder.blines = {}
 
-  local edit = tree_builder.current_edits["0"]
-
   local bline = BLine:new({
     parent_id = nil,
     path = tree_builder.path,
@@ -54,8 +52,10 @@ function Tree_Builder:new(path, options)
     nb_kept_children = 0, -- todo? amount of kept children
     next_child_idx = 1,   -- this is used for building the tree only. It keeps track of the node from wich to continue building the tree after touching the current dir.
     unlisted = 0,         -- amount of unlisted children. This will be set later
-    edit = edit
   })
+
+  local edit = tree_builder.current_edits[bline.id]
+  bline.edit = edit
   tree_builder.root_id = bline.id
   table.insert(tree_builder.blines, bline.id, bline)
 

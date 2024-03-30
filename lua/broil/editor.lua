@@ -266,7 +266,8 @@ function Editor:highlight_deleted(index, bline, current_lines, tree)
       vim.api.nvim_buf_set_extmark(tree.buf_id, self.delete_ns_id, index - 1 - self.deletion_count, 0, {
         sign_text = '▔',
         sign_hl_group = 'BroilDeleted',
-        invalidate = true
+        invalidate = true,
+        strict = false
       })
     end
 
