@@ -139,12 +139,16 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
         status = 'delete'
       end
 
+      local already_staged = nil
+      if (self.current_edits[id]) then
+        already_staged = self.current_edits[id].staged
+      end
       self.current_edits[id] = {
         id = id,
         path_from = path_from,
         path_to = path_to,
         line = line,
-        staged = false,
+        staged = already_staged or false,
         status = status,
         job_out = nil
       }
@@ -190,11 +194,16 @@ function Editor:build_deleted_and_remove_children(bline, tree)
     if (bline.file_type == 'directory') then
       path_from = bline.path .. '/'
     end
+
+    local already_staged = nil
+    if (self.current_edits[tostring(bline.id)]) then
+      already_staged = self.current_edits[tostring(bline.id)].staged
+    end
     self.current_edits[tostring(bline.id)] = {
       id = tostring(bline.id),
       path_from = path_from,
       path_to = nil,
-      staged = false,
+      staged = already_staged or false,
       status = 'delete',
       line = new_line,
       job_out = nil
