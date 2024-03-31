@@ -46,9 +46,9 @@ keymap.attach = function()
   keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.open_parent_dir, ui.open_parent_dir,
     { desc = 'Open parent dir' })
 
-  keymap.map(ui.buf_id, { 'n' }, config.mappings.pop_history, ui.pop_history,
+  keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.pop_history, ui.pop_history,
     { desc = 'Pop history item' })
-  keymap.map(ui.search_buf_id, { 'n' }, config.mappings.pop_history, ui.pop_history,
+  keymap.map(ui.search_buf_id, { 'n', 'i' }, config.mappings.pop_history, ui.pop_history,
     { desc = 'Pop history item' })
 
   keymap.map(ui.buf_id, { 'n', 'i' }, config.mappings.open_edits_float, ui.open_edits_float)
