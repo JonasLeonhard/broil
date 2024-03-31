@@ -30,6 +30,7 @@ function Editor:handle_edits(tree)
   for _, bline in ipairs(tree.lines) do
     self:build_deleted_and_remove_children(bline, tree)
   end
+  self:combine_nested_deletions()
 
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
   for index, line in ipairs(current_lines) do
@@ -76,23 +77,26 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
 
     while line_index > 1 do
       line_index = line_index - 1
-
       local line_above = current_lines[line_index]
       local line_indent_above = line_above:match("^%s*") or ""
-      local path_id_above = utils.get_bid_by_match(line_above)
-      local bline_above = tree:find_by_id(path_id_above)
 
-      if (#line_indent_above < #line_indent and path_id_above and bline_above.file_type == 'directory') then
-        parent_bline_dir_by_indent = bline_above
-        break;
-      end
+      -- check if the line above is a directory with less indent
+      -- check if the line above is a new edit directory with less indent
+      if (#line_indent_above < #line_indent) then
+        local path_id_above = utils.get_bid_by_match(line_above)
+        local bline_above = tree:find_by_id(path_id_above)
+        if (path_id_above and bline_above.file_type == 'directory') then
+          parent_bline_dir_by_indent = bline_above
+          break;
+        end
 
-      local edit_id_above = utils.get_new_id_by_match(line_above)
-      if (edit_id_above) then
-        local edit_above = self.current_edits[edit_id_above]
-        if (edit_above and edit_above.status == 'create' and edit_above.path_to:find('%/$')) then
-          parent_new_edit_dir_by_indent = edit_above
-          break
+        local edit_id_above = utils.get_new_id_by_match(line_above)
+        if (edit_id_above) then
+          local edit_above = self.current_edits[edit_id_above]
+          if (edit_above and edit_above.status == 'create' and edit_above.path_to:find('%/$')) then
+            parent_new_edit_dir_by_indent = edit_above
+            break
+          end
         end
       end
     end
@@ -221,6 +225,19 @@ function Editor:build_deleted_and_remove_children(bline, tree)
       line = new_line,
       job_out = nil
     }
+  end
+end
+
+--- eg. if you delete a folder, we should only have edits for the folder and not for all of its children
+function Editor:combine_nested_deletions()
+  for _, edit in pairs(self.current_edits) do
+    if (edit.status == 'delete') then
+      for _, edit2 in pairs(self.current_edits) do
+        if (edit2.status == 'delete' and edit.id ~= edit2.id and edit2.path_from:find(edit.path_from)) then
+          self.current_edits[edit2.id] = nil
+        end
+      end
+    end
   end
 end
 
