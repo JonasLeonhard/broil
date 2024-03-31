@@ -1,3 +1,31 @@
+local default_rm_command = function()
+  if string.match(vim.o.shell, '/nu$') then
+    return 'rm -r --trash <FROM>'
+  end
+
+  return 'rm -r <FROM>'
+end
+
+local default_mv_command = function()
+  return 'mv <FROM> <TO>'
+end
+
+local default_mkdir_command = function()
+  if string.match(vim.o.shell, '/nu$') then
+    return 'mkdir <TO>'
+  end
+
+  return 'mkdir -p <TO>'
+end
+
+local default_touch_command = function()
+  if string.match(vim.o.shell, '/nu$') then
+    return 'mkdir (dirname <TO>); touch <TO>'
+  end
+
+  return 'mkdir -p (dirname <TO>); touch <TO>'
+end
+
 local Config = {
   mappings = {
     -- general
@@ -53,10 +81,10 @@ local Config = {
   shell_exec_flag = '-c', -- will result in `sh -c 'command_below'`
 
   -- filesystem commands
-  rm_command = 'rm', -- you could use a trash command here. Or rm --trash for nushell...
-  mv_command = 'mv',
-  mkdir_command = 'mkdir -p',
-  touch_command = 'touch',
+  rm_command = default_rm_command(),
+  mv_command = default_mv_command(),
+  mkdir_command = default_mkdir_command(),
+  touch_command = default_touch_command(),
 
   -- internal config window
   buf_id = vim.api.nvim_create_buf(false, true),

@@ -36,7 +36,9 @@ function utils.get_new_id_by_match(line)
   local ok, res = pcall(tonumber, id_str)
   if not ok then return nil end
 
-  return res
+  if (not res) then return nil end
+
+  return '+' .. res
 end
 
 function utils.get_edit_id_by_match(line)

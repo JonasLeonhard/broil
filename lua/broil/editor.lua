@@ -67,13 +67,14 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
       end
     end
 
-    -- iterate backwards from this line in the tree, until we hit a line with a parsable bid?
+    -- iterate backwards from this line in the tree, until we hit a line or edit with a parsable id?
     local line_indent = line:match("^%s*") or ""
     local line_index = index;
     -- build the path_to by appending the bline name to the bline above this line
-    local parent_bline_by_indent = nil
+    local parent_bline_dir_by_indent = nil
+    local parent_new_edit_dir_by_indent = nil
 
-    while line_index > 1 and (not parent_bline_by_indent) do
+    while line_index > 1 do
       line_index = line_index - 1
 
       local line_above = current_lines[line_index]
@@ -82,7 +83,17 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
       local bline_above = tree:find_by_id(path_id_above)
 
       if (#line_indent_above < #line_indent and path_id_above and bline_above.file_type == 'directory') then
-        parent_bline_by_indent = bline_above
+        parent_bline_dir_by_indent = bline_above
+        break;
+      end
+
+      local edit_id_above = utils.get_new_id_by_match(line_above)
+      if (edit_id_above) then
+        local edit_above = self.current_edits[edit_id_above]
+        if (edit_above and edit_above.status == 'create' and edit_above.path_to:find('%/$')) then
+          parent_new_edit_dir_by_indent = edit_above
+          break
+        end
       end
     end
 
@@ -92,8 +103,10 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     local edited_line_name = vim.fn.fnamemodify(edited_line, ':t')
 
     local path_head
-    if (parent_bline_by_indent ~= nil) then
-      path_head = parent_bline_by_indent:get_dir_path()
+    if (parent_bline_dir_by_indent ~= nil) then
+      path_head = parent_bline_dir_by_indent:get_dir_path()
+    elseif (parent_new_edit_dir_by_indent ~= nil) then
+      path_head = parent_new_edit_dir_by_indent.path_to
     else
       path_head = tree.lines[1]:get_dir_path()
     end
@@ -115,7 +128,7 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     if (not path_id) then
       local new_id = utils.get_new_id_by_match(line)
       if (new_id) then
-        id = '+' .. new_id
+        id = new_id
       end
       if (not new_id) then
         id = ('+' .. self.new_edits_counter)
@@ -537,23 +550,18 @@ end
 function Editor:apply_staged_edits(callback)
   for _, edit in pairs(self.current_edits) do
     if (edit.staged) then
-      -- remove the edit after aplying it
-      self.current_edits[edit.id].status = 'queued'
-      self:render_edits()
-
-      if (edit.path_to == nil) then
+      if (edit.status == 'delete') then
         fs:delete(edit.path_from, vim.schedule_wrap(function(job_out, exit_code)
           if (exit_code == 0) then
             self.current_edits[edit.id].status = 'deleted'
           else
             self.current_edits[edit.id].status = 'error'
           end
-
           self.current_edits[edit.id].job_out = job_out
           self:render_edits()
           callback()
         end))
-      elseif (edit.path_from == nil) then
+      elseif (edit.status == 'create') then
         fs:create(edit.path_to, vim.schedule_wrap(function(job_out, exit_code)
           if (exit_code == 0) then
             self.current_edits[edit.id].status = 'created'
@@ -565,7 +573,7 @@ function Editor:apply_staged_edits(callback)
           self:render_edits()
           callback()
         end))
-      elseif (edit.path_from and edit.path_to) then
+      elseif (edit.status == 'edit') then
         fs:move(edit.path_from, edit.path_to, vim.schedule_wrap(function(job_out, exit_code)
           if (exit_code == 0) then
             self.current_edits[edit.id].status = 'edited'
@@ -578,6 +586,9 @@ function Editor:apply_staged_edits(callback)
           callback()
         end))
       end
+      -- remove the edit after applying it
+      self.current_edits[edit.id].status = 'queued'
+      self:render_edits()
     end
   end
 end
