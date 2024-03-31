@@ -29,6 +29,7 @@ broil.setup = function(opts)
   vim.api.nvim_command('highlight BroilInfo guifg=#b4befe')
   vim.api.nvim_command('highlight BroilInactive guifg=#a6adc8')
   vim.api.nvim_command('highlight BroilActive guifg=#f2cdcd')
+  vim.api.nvim_command('highlight BroilSearchIcon guifg=#bac2de')
 end
 
 broil.open = function(path)

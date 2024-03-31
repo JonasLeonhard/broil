@@ -22,6 +22,7 @@ local ui = {
   -- #Search
   search_win_id = nil,
   search_term = "", -- current search filter,
+  search_ns_id = vim.api.nvim_create_namespace('BroilSearchIcon'),
   -- #Info Bar
   info_buf_id = nil,
   info_highlight_ns_id = vim.api.nvim_create_namespace('BroilInfoHighlights'),
@@ -95,11 +96,6 @@ ui.create_search_window = function()
 
   -- Set the initial search term
   ui.set_search("")
-
-  -- Set the extmark at the beginning of the buffer and styling
-  vim.api.nvim_create_namespace('BroilSearchIcon')
-  vim.api.nvim_command('sign define BroilSearchIcon text=󰥨 ')
-  vim.api.nvim_command('sign place 1 line=1 name=BroilSearchIcon buffer=' .. ui.search_buf_id)
   vim.api.nvim_command('setlocal nonumber')
   vim.api.nvim_command('setlocal norelativenumber')
 end
@@ -251,9 +247,7 @@ ui.set_info_bar_message = function(msg, type)
 
   -- Set the buffer lines
   local icon = ' 󰙎 ';
-  if (type == 'verb') then
-    icon = '   ';
-  elseif (type == 'search') then
+  if (type == 'search') then
     icon = ' ' .. ui.spinner_frames[ui.spinner_frame] .. ' ';
     ui.spinner_frame = (ui.spinner_frame % #ui.spinner_frames) + 1
   elseif (type == 'edits') then
@@ -308,6 +302,23 @@ ui.on_search_input_listener = function()
         utils.debounce("search", function()
           ui.render()
         end, 100)()
+      end
+
+      -- Set the extmark at the beginning of the buffer and styling
+      vim.api.nvim_buf_clear_namespace(ui.search_buf_id, ui.search_ns_id, 0, -1)
+      if (ui.verb ~= nil) then
+        vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
+          { sign_text = "", sign_hl_group = "BroilSearchIcon" })
+        local find_start = string.find(search_buf_text, ':')
+        vim.api.nvim_buf_add_highlight(ui.search_buf_id, ui.search_ns_id, 'BroilInactive', 0, 0, find_start or 0)
+      else
+        if (config.search_mode == 0) then
+          vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
+            { sign_text = "󰥨", sign_hl_group = "BroilSearchIcon" })
+        else
+          vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
+            { sign_text = "󰱼", sign_hl_group = "BroilSearchIcon" })
+        end
       end
     end
   })
