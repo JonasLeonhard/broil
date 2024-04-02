@@ -44,13 +44,11 @@ function Editor:handle_edits(tree, editing)
 
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
   for index, line in ipairs(current_lines) do
-    tree:draw_line_extmarks(index, line, current_lines)
-
     if (editing) then
       self:build_new_and_edited(index, line, current_lines, tree)
     end
-
     self:highlight_new_and_modified(index, line, tree)
+    tree:draw_line_extmarks(index, line, current_lines)
   end
 
   for index, bline in ipairs(tree.lines) do
