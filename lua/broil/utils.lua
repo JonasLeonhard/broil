@@ -121,6 +121,8 @@ utils.set_preview_message = function(bufnr, winid, message, fillchar)
   fillchar = vim.F.if_nil(fillchar, "01")
   local height = vim.api.nvim_win_get_height(winid)
   local width = vim.api.nvim_win_get_width(winid)
+
+  vim.api.nvim_set_option_value('modifiable', true, { buf = bufnr })
   vim.api.nvim_buf_set_lines(
     bufnr,
     0,
@@ -128,6 +130,7 @@ utils.set_preview_message = function(bufnr, winid, message, fillchar)
     false,
     utils.table_of_length_filled_with(height, table.concat(utils.table_of_length_filled_with(width, fillchar), ""))
   )
+  vim.api.nvim_set_option_value('modifiable', false, { buf = bufnr })
   local anon_ns = vim.api.nvim_create_namespace ""
   local padding = table.concat(utils.table_of_length_filled_with(#message + 4, " "), "")
   local lines = {
