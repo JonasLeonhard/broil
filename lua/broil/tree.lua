@@ -33,7 +33,10 @@ function Tree:render()
   self.mark_virt_text = {}
 
   for index, bline in ipairs(self.lines) do
-    cache.render_cache[tostring(bline.id)] = bline
+    if (not cache.render_cache[self.buf_id]) then
+      cache.render_cache[self.buf_id] = {}
+    end
+    cache.render_cache[self.buf_id][tostring(bline.id)] = bline
     local rendered_line = self:render_name(bline)
 
     if (bline.file_type == 'directory') then
@@ -93,11 +96,6 @@ function Tree:render()
       vim.fn.matchadd('Conceal', [[\[\d\+\]$]])  -- eg: [13]
       vim.fn.matchadd('Conceal', [[\[.\d\+\]$]]) -- eg: [+13]
     end)
-  end
-
-  local current_lines = vim.api.nvim_buf_get_lines(self.buf_id, 0, -1, false)
-  for index, line in ipairs(current_lines) do
-    self:draw_line_extmarks(index, line, current_lines)
   end
 end
 
@@ -334,7 +332,7 @@ function Tree:find_by_id(bid)
     return nil
   end
 
-  return cache.render_cache[tostring(bid)]
+  return cache.render_cache[self.buf_id][tostring(bid)]
 end
 
 --- remove the dirs children recursively if we can find them

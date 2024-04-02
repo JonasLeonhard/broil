@@ -72,7 +72,7 @@ ui.create_tree_window = function()
   vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
     buffer = ui.buf_id,
     callback = function()
-      ui.editor:handle_edits(ui.tree)
+      ui.editor:handle_edits(ui.tree, true)
     end
   })
 end
@@ -90,6 +90,7 @@ ui.create_search_window = function()
   vim.api.nvim_command("botright " .. 1 .. 'split')
   ui.search_win_id = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(ui.search_win_id, ui.search_buf_id)
+  vim.api.nvim_set_option_value('winfixheight', true, { win = ui.search_win_id })
 
   -- Start insert mode in the new search window
   vim.api.nvim_command('startinsert')
@@ -153,8 +154,6 @@ ui.preview_hovered_node = function()
     if (not ui.win_id) then
       return
     end
-    vim.api.nvim_set_option_value('modifiable', true, { buf = ui.preview_buf_id })
-
     local cursor_pos = vim.api.nvim_win_get_cursor(ui.win_id)
     local cursor_y = cursor_pos[1]
     local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, cursor_y - 1, cursor_y, false)[1]
@@ -182,10 +181,14 @@ ui.preview_hovered_node = function()
           highest_score_index = tree_build.highest_score_index,
           open_path_index = tree_build.open_path_index
         })
+
+        vim.api.nvim_set_option_value('modifiable', true, { buf = ui.preview_buf_id })
         ui.prev_tree:render()
+        ui.editor:handle_edits(ui.prev_tree, false)
+        vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
+
         ui.prev_tree:initial_selection()
         builder:destroy()
-        vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
         vim.api.nvim_set_option_value('filetype', nil, { buf = ui.preview_buf_id })
       end)
       async.run(render_async)
@@ -209,10 +212,12 @@ ui.preview_hovered_node = function()
         for line in string.gmatch(data, "[^\r\n]+") do
           table.insert(lines, line)
         end
+        vim.api.nvim_set_option_value('modifiable', true, { buf = ui.preview_buf_id })
         vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false, lines)
+        vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
+
         local detect_filetype = vim.filetype.match({ buf = ui.preview_buf_id, filename = bline.name })
         vim.api.nvim_set_option_value('filetype', detect_filetype, { buf = ui.preview_buf_id })
-        vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
         if (config.search_mode == 1 and #bline.grep_results > 0) then
           local first_result = bline.grep_results[1]
           pcall(vim.api.nvim_win_set_cursor, ui.preview_win_id, { first_result.row, first_result.column })
@@ -304,24 +309,29 @@ ui.on_search_input_listener = function()
         end, 100)()
       end
 
-      -- Set the extmark at the beginning of the buffer and styling
-      vim.api.nvim_buf_clear_namespace(ui.search_buf_id, ui.search_ns_id, 0, -1)
-      if (ui.verb ~= nil) then
-        vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
-          { sign_text = "", sign_hl_group = "BroilSearchIcon" })
-        local find_start = string.find(search_buf_text, ':')
-        vim.api.nvim_buf_add_highlight(ui.search_buf_id, ui.search_ns_id, 'BroilInactive', 0, 0, find_start or 0)
-      else
-        if (config.search_mode == 0) then
-          vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
-            { sign_text = "󰥨", sign_hl_group = "BroilSearchIcon" })
-        else
-          vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
-            { sign_text = "󰱼", sign_hl_group = "BroilSearchIcon" })
-        end
-      end
+      ui.set_search_input_sign_and_highlight()
     end
   })
+end
+
+ui.set_search_input_sign_and_highlight = function()
+  local search_buf_text = vim.api.nvim_buf_get_lines(ui.search_buf_id, 0, -1, false)[1]
+  -- Set the extmark at the beginning of the buffer and styling
+  vim.api.nvim_buf_clear_namespace(ui.search_buf_id, ui.search_ns_id, 0, -1)
+  if (ui.verb ~= nil) then
+    vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
+      { sign_text = "", sign_hl_group = "BroilSearchIcon" })
+    local find_start = string.find(search_buf_text, ':')
+    vim.api.nvim_buf_add_highlight(ui.search_buf_id, ui.search_ns_id, 'BroilInactive', 0, 0, find_start or 0)
+  else
+    if (config.search_mode == 0) then
+      vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
+        { sign_text = "󰥨", sign_hl_group = "BroilSearchIcon" })
+    else
+      vim.api.nvim_buf_set_extmark(ui.search_buf_id, ui.search_ns_id, 0, 0,
+        { sign_text = "󰱼", sign_hl_group = "BroilSearchIcon" })
+    end
+  end
 end
 
 --- Set the verb in the info bar
@@ -522,6 +532,11 @@ end
 
 --- open a floating window with a tree view of the current file's directory
 ui.open = function()
+  -- we are already open
+  if (ui.search_win_id) then
+    vim.api.nvim_set_current_win(ui.search_win_id)
+    return
+  end
   -- 1. create a search prompt at the bottom
   ui.create_search_window()
   ui.create_tree_window()
@@ -691,6 +706,7 @@ end
 ui.close_config_float = function()
   config:close_config_float()
   ui.set_info_bar_message()
+  ui.set_search_input_sign_and_highlight()
   ui.render()
 end
 
@@ -727,7 +743,7 @@ ui.render = function(selection_index)
     ui.tree:initial_selection(selection_index)
     builder:destroy()
     ui.editor:append_new_lines_from_edits(ui.tree)
-    ui.editor:handle_edits(ui.tree)
+    ui.editor:handle_edits(ui.tree, false)
 
     ui.open_dir = builder.path
     ui.render_start = builder.build_start
@@ -741,7 +757,6 @@ ui.render = function(selection_index)
       end
       ui.set_info_bar_message()
     end, 200)()
-    vim.api.nvim_win_set_height(ui.search_win_id, 1)
   end)
 
   async.run(render_async)

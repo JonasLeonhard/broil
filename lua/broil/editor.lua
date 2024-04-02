@@ -1,5 +1,6 @@
 local utils = require('broil.utils')
 local fs = require('broil.fs')
+local async = require('plenary.async')
 
 local Editor = {}
 Editor.__index = Editor
@@ -22,20 +23,33 @@ function Editor:new()
   return editor
 end
 
-function Editor:handle_edits(tree)
+--- this function gets run async in the rerender, but not async when editing!
+--- @param editing boolean -- whether we are after a tree rerender, or after an edit in the tree buffer
+function Editor:handle_edits(tree, editing)
   vim.api.nvim_buf_clear_namespace(tree.buf_id, self.delete_ns_id, 0, -1)
   vim.api.nvim_buf_clear_namespace(tree.buf_id, self.highlight_ns_id, 0, -1)
   self.deletion_count = 0
 
+  -- we cannot have deletions in the buffer if we are in a rerender
   for _, bline in ipairs(tree.lines) do
     self:build_deleted_and_remove_children(bline, tree)
   end
-  self:combine_nested_deletions()
+  if (editing) then
+    self:combine_nested_deletions()
+  end
+
+  if (not editing) then
+    async.util.scheduler() -- allow other tasks to run from time to time
+  end
 
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
   for index, line in ipairs(current_lines) do
-    self:build_new_and_edited(index, line, current_lines, tree)
     tree:draw_line_extmarks(index, line, current_lines)
+
+    if (editing) then
+      self:build_new_and_edited(index, line, current_lines, tree)
+    end
+
     self:highlight_new_and_modified(index, line, tree)
   end
 
@@ -43,8 +57,14 @@ function Editor:handle_edits(tree)
     self:highlight_deleted(index, bline, current_lines, tree)
   end
 
-  current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
-  self:remove_new_edits_if_removed(tree, current_lines)
+  if (not editing) then
+    async.util.scheduler() -- allow other tasks to run from time to time
+  end
+
+  if (editing) then
+    current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
+    self:remove_new_edits_if_removed(tree, current_lines)
+  end
 end
 
 --- @param line string rendered line of the tree
