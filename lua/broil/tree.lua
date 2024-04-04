@@ -255,9 +255,9 @@ function Tree:initial_selection(selection_index)
   end
 
   if (self.pattern ~= '') then
-    vim.api.nvim_win_set_cursor(self.win_id, { self.highest_score_index, 0 })
+    pcall(vim.api.nvim_win_set_cursor, self.win_id, { self.highest_score_index, 0 })
   else -- open the path
-    vim.api.nvim_win_set_cursor(self.win_id, { self.open_path_index, 0 })
+    pcall(vim.api.nvim_win_set_cursor, self.win_id, { self.open_path_index, 0 })
   end
 end
 
