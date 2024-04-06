@@ -1,29 +1,29 @@
 local default_rm_command = function()
   if string.match(vim.o.shell, '/nu$') then
-    return 'rm -r --trash <FROM>'
+    return 'rm -r --trash "<FROM>"'
   end
 
-  return 'rm -r <FROM>'
+  return 'rm -r "<FROM>"'
 end
 
 local default_mv_command = function()
-  return 'mv <FROM> <TO>'
+  return 'mv "<FROM>" "<TO>"'
 end
 
 local default_mkdir_command = function()
   if string.match(vim.o.shell, '/nu$') then
-    return 'mkdir <TO>'
+    return 'mkdir "<TO>"'
   end
 
-  return 'mkdir -p <TO>'
+  return 'mkdir -p "<TO>"'
 end
 
 local default_touch_command = function()
   if string.match(vim.o.shell, '/nu$') then
-    return 'mkdir (dirname <TO>); touch <TO>'
+    return 'mkdir (dirname "<TO>"); touch "<TO>"'
   end
 
-  return 'mkdir -p (dirname <TO>); touch <TO>'
+  return 'mkdir -p (dirname "<TO>"); touch "<TO>"'
 end
 
 local Config = {
