@@ -7,7 +7,7 @@ function Filesystem:delete(path_from, callback)
 
   Job:new({
     command = config.shell,
-    args = { config.shell_exec_flag, config.rm_command:gsub('<FROM>', path_from) },
+    args = { config.shell_exec_flag, config.rm_command:gsub('<FROM>', vim.fn.shellescape(path_from)) },
     cwd = vim.fn.getcwd(),
     on_stdout = function(_, stdout)
       table.insert(job_out, stdout)
@@ -26,7 +26,7 @@ function Filesystem:move(path_from, path_to, callback)
 
   Job:new({
     command = config.shell,
-    args = { config.shell_exec_flag, config.mv_command:gsub('<FROM>', path_from):gsub('<TO>', path_to) },
+    args = { config.shell_exec_flag, config.mv_command:gsub('<FROM>', path_from):gsub('<TO>', vim.fn.shellescape(path_to)) },
     cwd = vim.fn.getcwd(),
     on_stdout = function(_, stdout)
       table.insert(job_out, stdout)
@@ -45,7 +45,7 @@ function Filesystem:create(path_to, callback)
   if (path_to:sub(-1) == '/') then
     Job:new({
       command = config.shell,
-      args = { config.shell_exec_flag, config.mkdir_command:gsub('<TO>', path_to) },
+      args = { config.shell_exec_flag, config.mkdir_command:gsub('<TO>', vim.fn.shellescape(path_to)) },
       cwd = vim.fn.getcwd(),
       on_stdout = function(_, stdout)
         table.insert(job_out, stdout)
@@ -60,7 +60,7 @@ function Filesystem:create(path_to, callback)
   else
     Job:new({
       command = config.shell,
-      args = { config.shell_exec_flag, config.touch_command:gsub('<TO>', path_to) },
+      args = { config.shell_exec_flag, config.touch_command:gsub('<TO>', vim.fn.shellescape(path_to)) },
       cwd = vim.fn.getcwd(),
       on_stdout = function(_, stdout)
         table.insert(job_out, stdout)
