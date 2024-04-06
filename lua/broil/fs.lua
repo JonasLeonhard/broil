@@ -26,7 +26,7 @@ function Filesystem:move(path_from, path_to, callback)
 
   Job:new({
     command = config.shell,
-    args = { config.shell_exec_flag, config.mv_command:gsub('<FROM>', path_from):gsub('<TO>', vim.fn.shellescape(path_to)) },
+    args = { config.shell_exec_flag, config.mv_command:gsub('<FROM>', vim.fn.shellescape(path_from)):gsub('<TO>', vim.fn.shellescape(path_to)) },
     cwd = vim.fn.getcwd(),
     on_stdout = function(_, stdout)
       table.insert(job_out, stdout)
