@@ -26,6 +26,10 @@ local default_touch_command = function()
   return 'mkdir -p (dirname <TO>); touch <TO>'
 end
 
+local default_cp_command = function()
+  return 'cp <FROM> <TO>'
+end
+
 local Config = {
   mappings = {
     -- general
@@ -83,6 +87,7 @@ local Config = {
   -- filesystem commands
   rm_command = default_rm_command(),
   mv_command = default_mv_command(),
+  cp_command = default_cp_command(),
   mkdir_command = default_mkdir_command(),
   touch_command = default_touch_command(),
 

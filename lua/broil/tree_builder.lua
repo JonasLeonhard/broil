@@ -55,7 +55,7 @@ function Tree_Builder:new(path, options)
     grep_results = {},
   })
 
-  local edit = tree_builder.current_edits[bline.id]
+  local edit = tree_builder.current_edits[bline.id] or tree_builder.current_edits['-' .. bline.id]
   bline.edit = edit
   tree_builder.root_id = bline.id
   table.insert(tree_builder.blines, bline.id, bline)
@@ -241,7 +241,7 @@ function Tree_Builder:create_bline(parent_bline, name, type)
   local edit
   -- check if we edited the line
   if (cached_id) then
-    edit = self.current_edits[tostring(cached_id)]
+    edit = self.current_edits[tostring(cached_id)] or self.current_edits['-' .. tostring(cached_id)]
 
     if (edit and edit.path_from and edit.path_to) then -- edited, display the edit name & change path
       path = edit.path_to

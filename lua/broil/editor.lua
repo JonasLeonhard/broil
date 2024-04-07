@@ -34,9 +34,6 @@ function Editor:handle_edits(tree, editing)
   for _, bline in ipairs(tree.lines) do
     self:build_deleted_and_remove_children(bline, tree)
   end
-  if (editing) then
-    self:combine_nested_deletions()
-  end
 
   if (not editing) then
     async.util.scheduler() -- allow other tasks to run from time to time
@@ -47,6 +44,13 @@ function Editor:handle_edits(tree, editing)
     if (editing) then
       self:build_new_and_edited(index, line, current_lines, tree)
     end
+  end
+
+  if (editing) then
+    self:combine_edits()
+  end
+
+  for index, line in ipairs(current_lines) do
     self:highlight_new_and_modified(index, line, tree)
     tree:draw_line_extmarks(index, line, current_lines)
   end
@@ -86,38 +90,8 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
       end
     end
 
-    -- iterate backwards from this line in the tree, until we hit a line or edit with a parsable id?
-    local line_indent = line:match("^%s*") or ""
-    local line_index = index;
-    -- build the path_to by appending the bline name to the bline above this line
-    local parent_bline_dir_by_indent = nil
-    local parent_new_edit_dir_by_indent = nil
-
-    while line_index > 1 do
-      line_index = line_index - 1
-      local line_above = current_lines[line_index]
-      local line_indent_above = line_above:match("^%s*") or ""
-
-      -- check if the line above is a directory with less indent
-      -- check if the line above is a new edit directory with less indent
-      if (#line_indent_above < #line_indent) then
-        local path_id_above = utils.get_bid_by_match(line_above)
-        local bline_above = tree:find_by_id(path_id_above)
-        if (path_id_above and bline_above.file_type == 'directory') then
-          parent_bline_dir_by_indent = bline_above
-          break;
-        end
-
-        local edit_id_above = utils.get_new_id_by_match(line_above)
-        if (edit_id_above) then
-          local edit_above = self.current_edits[edit_id_above]
-          if (edit_above and edit_above.status == 'create' and edit_above.path_to:find('%/$')) then
-            parent_new_edit_dir_by_indent = edit_above
-            break
-          end
-        end
-      end
-    end
+    local parent_bline_dir_by_indent, parent_new_edit_dir_by_indent = self:line_get_parent_by_indent(line,
+      index, tree, current_lines)
 
     -- remove leading whitespace before first char, remove path_id from the end, remove trailing slash for dirs
     local edited_line_w_trailing_slash = line:gsub("^%s*", ""):gsub("%[%d+%]$", ""):gsub("%[%+%d+%]$", "")
@@ -167,11 +141,21 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
     end
 
     if (path_from ~= path_to) then
-      local status = 'edit'
+      local status = 'copy'
       if (not path_from) then
         status = 'create'
-      elseif (not path_to) then
-        status = 'delete'
+      end
+
+      if (path_from and path_to) then
+        local from_dir = vim.fn.fnamemodify(path_from, ':h');
+        local to_dir = vim.fn.fnamemodify(path_to, ':h');
+        if (from_dir == to_dir) then
+          status = 'move'
+        end
+      end
+
+      if (status == 'copy') then
+        id = '=' .. id
       end
 
       local already_staged = nil
@@ -193,6 +177,43 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
   end
 end
 
+function Editor:line_get_parent_by_indent(line, index, tree, current_lines)
+  -- iterate backwards from this line in the tree, until we hit a line or edit with a parsable id?
+  local line_indent = line:match("^%s*") or ""
+  local line_index = index;
+  -- build the path_to by appending the bline name to the bline above this line
+  local parent_bline_dir_by_indent = nil
+  local parent_new_edit_dir_by_indent = nil
+
+  while line_index > 1 do
+    line_index = line_index - 1
+    local line_above = current_lines[line_index]
+    local line_indent_above = line_above:match("^%s*") or ""
+
+    -- check if the line above is a directory with less indent
+    -- check if the line above is a new edit directory with less indent
+    if (#line_indent_above < #line_indent) then
+      local path_id_above = utils.get_bid_by_match(line_above)
+      local bline_above = tree:find_by_id(path_id_above)
+      if (path_id_above and bline_above.file_type == 'directory') then
+        parent_bline_dir_by_indent = bline_above
+        break;
+      end
+
+      local edit_id_above = utils.get_new_id_by_match(line_above)
+      if (edit_id_above) then
+        local edit_above = self.current_edits[edit_id_above]
+        if (edit_above and edit_above.status == 'create' and edit_above.path_to:find('%/$')) then
+          parent_new_edit_dir_by_indent = edit_above
+          break
+        end
+      end
+    end
+  end
+
+  return parent_bline_dir_by_indent, parent_new_edit_dir_by_indent
+end
+
 function Editor:build_deleted_and_remove_children(bline, tree)
   if (not bline or bline.line_type == 'pruning') then
     return
@@ -205,19 +226,26 @@ function Editor:build_deleted_and_remove_children(bline, tree)
   -- check if the line was deleted in an edit. if so remove it
   -- check if a line with the bid exists after editing
   local path_id = nil
-  for _, line in ipairs(current_lines) do
+  for index, line in ipairs(current_lines) do
     if (bline.edit and bline.edit.status == 'delete') then
       tree:remove_children({ bline.id })
     end
 
     path_id = utils.get_bid_by_match(line)
     if (path_id == bline.id) then
-      current_line_exists = true
-      new_line = line
-      break
+      local parent_bline_dir_by_indent = self:line_get_parent_by_indent(line,
+        index, tree, current_lines)
+
+      if (not parent_bline_dir_by_indent or not bline.parent_id or parent_bline_dir_by_indent.id == bline.parent_id) then
+        current_line_exists = true
+        new_line = line
+        break
+      end
     end
   end
 
+
+  local id = '-' .. tostring(bline.id)
 
   -- if not, we deleted it
   if (not current_line_exists) then
@@ -231,11 +259,11 @@ function Editor:build_deleted_and_remove_children(bline, tree)
     end
 
     local already_staged = nil
-    if (self.current_edits[tostring(bline.id)]) then
-      already_staged = self.current_edits[tostring(bline.id)].staged
+    if (self.current_edits[id]) then
+      already_staged = self.current_edits[id].staged
     end
-    self.current_edits[tostring(bline.id)] = {
-      id = tostring(bline.id),
+    self.current_edits[id] = {
+      id = id,
       path_from = path_from,
       path_to = nil,
       staged = already_staged or false,
@@ -243,16 +271,41 @@ function Editor:build_deleted_and_remove_children(bline, tree)
       line = new_line,
       job_out = nil
     }
+  else
+    -- the line exists, so remove the delete edit if it exists
+    self.current_edits[id] = nil
   end
 end
 
---- eg. if you delete a folder, we should only have edits for the folder and not for all of its children
-function Editor:combine_nested_deletions()
+--- 1. combine deletes: eg. if you delete a folder, we should only have edits for the folder and not for all of its children
+--- 2. combine delete and copy to move. If you deleted a file and copied it else where, we move it instead.
+function Editor:combine_edits()
   for _, edit in pairs(self.current_edits) do
     if (edit.status == 'delete') then
       for _, edit2 in pairs(self.current_edits) do
+        -- combine deletes
         if (edit2.status == 'delete' and edit.id ~= edit2.id and edit2.path_from:find(edit.path_from)) then
           self.current_edits[edit2.id] = nil
+        end
+
+        -- combine delete and copy to move
+        if (edit2.status == 'copy' and edit.id ~= edit2.id and edit.path_from == edit2.path_from) then
+          self.current_edits[edit2.id] = nil -- remove copy
+          self.current_edits[edit.id] = nil  -- remove delete
+          -- create move
+          edit2.status = 'move'
+          edit2.id = edit2.id:gsub("+", '')
+          self.current_edits[edit2.id] = edit2
+        end
+      end
+    end
+
+    if (edit.status == 'move') then
+      for _, edit2 in pairs(self.current_edits) do
+        -- remove move if there is a delete with the same from path
+        if (edit2.status == 'delete' and edit.id ~= edit2.id and edit.path_from == edit2.path_from) then
+          self.current_edits[edit.id] = nil
+          break;
         end
       end
     end
@@ -264,29 +317,33 @@ function Editor:highlight_new_and_modified(index, line, tree)
     return
   end
 
-  local path_id = utils.get_bid_by_match(line)
-  local bline = tree:find_by_id(path_id)
+  local edit_id = utils.get_edit_id_by_match(line)
+  local edit = self.current_edits[edit_id] or self.current_edits['=' .. (edit_id or '')]
 
-  if (bline) then
-    local edit = self.current_edits[tostring(bline.id)]
-
-    if (edit) then
-      -- highlight the line as edited
+  if (edit) then
+    -- highlight the edited line
+    if (edit.status == 'copy') then
+      vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
+        sign_text = "┃",
+        sign_hl_group = 'BroilCopy',
+        invalidate = true
+      })
+    elseif (edit.status == 'create') then
+      vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
+        sign_text = '┃',
+        sign_hl_group = 'BroilAdded',
+        invalidate = true
+      })
+    elseif (edit.status == 'move') then
       vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
         sign_text = '┃',
         sign_hl_group = 'BroilEdited',
         invalidate = true
       })
-    else
-      -- remove the highlight
-      vim.api.nvim_buf_clear_namespace(tree.buf_id, self.highlight_ns_id, index, index + 1)
     end
   else
-    vim.api.nvim_buf_set_extmark(tree.buf_id, self.highlight_ns_id, index - 1, 0, {
-      sign_text = '┃',
-      sign_hl_group = 'BroilAdded',
-      invalidate = true
-    })
+    -- remove the highlight
+    vim.api.nvim_buf_clear_namespace(tree.buf_id, self.highlight_ns_id, index, index + 1)
   end
 end
 
@@ -362,7 +419,7 @@ end
 
 function Editor:render_edit(line_number, edit)
   local line_status = 'MOVE      '
-  if (edit.status == 'edited') then
+  if (edit.status == 'moved') then
     line_status = 'MOVED     '
   elseif (edit.status == 'delete') then
     line_status = 'DELETE    '
@@ -372,6 +429,10 @@ function Editor:render_edit(line_number, edit)
     line_status = 'CREATE    '
   elseif (edit.status == 'created') then
     line_status = 'CREATED    '
+  elseif (edit.status == 'copy') then
+    line_status = 'COPY       '
+  elseif (edit.status == 'copied') then
+    line_status = 'COPIED     '
   elseif (edit.status == 'queued') then
     line_status = 'QUEUED    '
   elseif (edit.status == 'error') then
@@ -387,13 +448,15 @@ function Editor:render_edit(line_number, edit)
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilDeleted', line_number, 0, 7)
   elseif (edit.status == 'create') then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilAdded', line_number, 0, 7)
-  elseif (edit.status == 'edit') then
+  elseif (edit.status == 'copy') then
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilCopy', line_number, 0, 4)
+  elseif (edit.status == 'move') then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilEdited', line_number, 0, 7)
   elseif (edit.status == 'queued') then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilQueued', line_number, 0, 7)
   elseif (edit.status == 'error') then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilDeleted', line_number, 0, 7)
-  elseif (edit.status == 'deleted' or edit.status == 'created' or edit.status == 'edited') then
+  elseif (edit.status == 'deleted' or edit.status == 'created' or edit.status == 'moved' or edit.status == 'copied') then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.edit_window_ns_id, 'BroilInfo', line_number, 0, 7)
   end
 
@@ -411,7 +474,7 @@ function Editor:open_edits_float(win_id)
   end
 
   for e_id, edit in pairs(self.current_edits) do
-    if (edit.status == 'created' or edit.status == 'edited' or edit.status == 'deleted') then
+    if (edit.status == 'created' or edit.status == 'moved' or edit.status == 'deleted' or edit.status == 'copied') then
       self.current_edits[e_id] = nil
     end
   end
@@ -608,10 +671,22 @@ function Editor:apply_staged_edits(callback)
           self:render_edits()
           callback()
         end))
-      elseif (edit.status == 'edit') then
+      elseif (edit.status == 'move') then
         fs:move(edit.path_from, edit.path_to, vim.schedule_wrap(function(job_out, exit_code)
           if (exit_code == 0) then
-            self.current_edits[edit.id].status = 'edited'
+            self.current_edits[edit.id].status = 'moved'
+          else
+            self.current_edits[edit.id].status = 'error'
+          end
+
+          self.current_edits[edit.id].job_out = job_out
+          self:render_edits()
+          callback()
+        end))
+      elseif (edit.status == 'copy') then
+        fs:copy(edit.path_from, edit.path_to, vim.schedule_wrap(function(job_out, exit_code)
+          if (exit_code == 0) then
+            self.current_edits[edit.id].status = 'copied'
           else
             self.current_edits[edit.id].status = 'error'
           end
