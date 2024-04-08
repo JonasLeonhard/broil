@@ -308,78 +308,96 @@ function Tree_Builder:create_bline(parent_bline, name, type)
   })
 end
 
---- @param bline_ids broil.BId[]
-function Tree_Builder:as_tree(bline_ids)
+function Tree_Builder:sorted_children(children)
+  -- sort by file_type
+  if (config.sort_option == 0) then
+    table.sort(children, function(a, b)
+      local bline_a = self.blines[a]
+      local bline_b = self.blines[b]
+      if (config.sort_order == 1) then
+        return bline_a.file_type > bline_b.file_type
+      end
+      return bline_a.file_type < bline_b.file_type
+    end)
+  end
+
+  -- sort by size
+  if (config.sort_option == 1) then
+    table.sort(children, function(a, b)
+      local bline_a = self.blines[a]
+      local bline_b = self.blines[b]
+      if (config.sort_order == 1) then
+        return bline_a.fs_stat.size > bline_b.fs_stat.size
+      end
+
+      return bline_a.fs_stat.size < bline_b.fs_stat.size
+    end)
+  end
+
+  -- sort alphabetically
+  if (config.sort_option == 2) then
+    table.sort(children, function(a, b)
+      local bline_a = self.blines[a]
+      local bline_b = self.blines[b]
+      if (config.sort_order == 1) then
+        return bline_a.name:lower() > bline_b.name:lower()
+      end
+      return bline_a.name:lower() < bline_b.name:lower()
+    end)
+  end
+
+  -- TODO:
+  -- sort by children_count
+  if (config.sort_option == 3) then
+    table.sort(children, function(a, b)
+      local bline_a = self.blines[a]
+      local bline_b = self.blines[b]
+      if (config.sort_order == 1) then
+        return #bline_a.children < #bline_b.children
+      end
+      return #bline_a.children > #bline_b.children
+    end)
+  end
+
+  -- TODO:
+  -- sort by date_modified
+  if (config.sort_option == 4) then
+    table.sort(children, function(a, b)
+      local bline_a = self.blines[a]
+      local bline_b = self.blines[b]
+      if (config.sort_order == 1) then
+        return bline_a.fs_stat.mtime.sec < bline_b.fs_stat.mtime.sec
+      end
+      return bline_a.fs_stat.mtime.sec > bline_b.fs_stat.mtime.sec
+    end)
+  end
+
+  -- otherwise same order as discovered by walking
+  return children
+end
+
+function Tree_Builder:as_tree()
   -- build tree_lines with only matching nodes from ids
   local tree_lines = {}
-  local bid_lines = {}
-  local bid_parents = {}
-  for _, bline_id in ipairs(bline_ids) do
-    local bline = self.blines[bline_id]
 
+  -- recursively build the tree from the root node
+  local function build_tree_lines(bline_id)
+    local bline = self.blines[bline_id]
     -- set amount of unlisted children
     bline.unlisted = #bline.children - (bline.next_child_idx - 1)
 
     -- always insert all nodes when searching for nothing, otherwise only if it matches
     if (self.pattern == '' or bline.has_match) then
       table.insert(tree_lines, bline)
-    end
 
-    if (bline.parent_id) then
-      bid_parents[bline.id] = bline.parent_id
-    end
-    bid_lines[bline.id] = bline
-  end
-
-  -- we need to order the lines to build the tree.
-  -- It's a little complicated because
-  --  - we want a case insensitive sort
-  --  - we still don't want to confuse the children of AA and Aa
-  --  - a node can come from a not parent node, when we followed a link
-  local sort_paths = {}
-  for i = 1, #tree_lines do
-    local sort_path = ''
-    local bid = tree_lines[i].id;
-
-    while true do
-      local sort_prefix = ''
-      local bline = bid_lines[bid]
-
-      if (config.sort_option == 0) then
-        -- 0 = 'TypeDirsFirst'
-        if (bline.file_type == 'directory') then
-          sort_prefix = '              '
-        else
-          sort_prefix = vim.fn.expand(bline.path .. ':e') -- path_extension
-        end
-      elseif (config.sort_option == 1) then
-        -- 1 = 'TypeDirsLast'
-        if (bline.file_type == 'directory') then
-          sort_prefix = '~~~~~~~~~~~~~~'
-        else
-          sort_prefix = vim.fn.expand(bline.path .. ':e') -- path_extension
-        end
-      elseif (config.sort_option == 2) then
-        -- Size
-        sort_prefix = bline.fs_stat.size
-      elseif (config.sort_option == 3) then
-        -- Alphabetical
-        sort_prefix = bline.name
-      end
-      sort_path = string.format("%s%s-%s/%s", sort_prefix, bline.name:lower(), bline.id, sort_path)
-      if (bid_parents[bid]) then
-        bid = bid_parents[bid]
-      else
-        break
+      local sorted_children = self:sorted_children(bline.children)
+      for _, child_id in ipairs(sorted_children) do
+        build_tree_lines(child_id)
       end
     end
-    sort_paths[tree_lines[i].id] = sort_path
   end
 
-  -- sorting paths into tree-clusters
-  table.sort(tree_lines, function(a, b)
-    return sort_paths[a.id] < sort_paths[b.id]
-  end)
+  build_tree_lines(self.root_id)
 
   -- get the best scoring node & the opened index to select later
   local highest_score_index = 1
@@ -443,9 +461,9 @@ function Tree_Builder:build_tree()
 
   self.build_start = vim.fn.reltime()
 
-  self:load_children(root_node.id)      -- load the root nodes children
-  local bline_ids = self:gather_lines() -- unsorted bids
-  local tree = self:as_tree(bline_ids)  -- structure with sorted and clustered blines
+  self:load_children(root_node.id) -- load the root nodes children
+  self:gather_lines()              -- build self.blines
+  local tree = self:as_tree()      -- self.blines to treeline with sorted and clustered blines
 
   self.build_end = vim.fn.reltime()
 

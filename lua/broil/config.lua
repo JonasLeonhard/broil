@@ -78,7 +78,8 @@ local Config = {
   fzf_case_mode = 0,  -- case_mode: number with 0 = smart_case, 1 = ignore_case, 2 = respect_case
   fzf_fuzzy_match = true,
   show_hidden = true, -- files/dirs with '.'
-  sort_option = 0,    -- 0 = 'TypeDirsFirst',  1 = 'TypeDirsLast'
+  sort_option = 0,    -- 0 = 'Type',  1 = 'Size', 2 = 'Alphabetical'
+  sort_order = 0,     -- 0 = 'Ascending', 1 = 'Descending'
   file_size_preview_limit_mb = 5,
 
   shell = vim.o.shell,
@@ -156,53 +157,66 @@ function Config:render_config_settings()
 
   -- Sort:
   vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false,
-    { '-s: Sort by [dir_first, file_first, size, alphabetical] (TODO)' })
+    { '-s: Sort by [file_type, size, alphabetical, children_count, date_modified]' })
   vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInfo', 3, 0, 2)
   vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInactive', 3, 12, -1)
   if (self.sort_option == 0) then
     vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 3, 13, 22)
   elseif (self.sort_option == 1) then
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 3, 24, 34)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 3, 24, 28)
   elseif (self.sort_option == 2) then
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 3, 36, 40)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 3, 30, 42)
   elseif (self.sort_option == 3) then
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 3, 42, 54)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 3, 44, 58)
+  elseif (self.sort_option == 4) then
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 3, 60, 73)
+  end
+
+  -- Sort Order:
+  vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false,
+    { '-o: Sort order [asc, desc]' })
+  vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInfo', 4, 0, 2)
+  vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInactive', 4, 12, -1)
+  if (self.sort_order == 0) then
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 4, 16, 19)
+  else
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 4, 21, 25)
   end
 
   -- Show hidden:
   vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false,
     { '-h: Show hidden [true, false]' })
-  vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInfo', 4, 0, 2)
-  vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInactive', 4, 16, -1)
+  vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInfo', 5, 0, 2)
+  vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInactive', 5, 16, -1)
   if (self.show_hidden) then
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 4, 17, 21)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 5, 17, 21)
   else
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 4, 23, 28)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 5, 23, 28)
   end
 
   -- Fuzzy case_mode
   if (self.search_mode == 0) then
     vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false,
       { '-C: Fuzzy case mode [smart_case, ignore_case, respect_case]' })
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInfo', 5, 0, 2)
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInactive', 5, 20, -1)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInfo', 6, 0, 2)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInactive', 6, 20, -1)
     if (self.fzf_case_mode == 0) then
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 5, 21, 31)
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 6, 21, 31)
     elseif (self.fzf_case_mode == 1) then
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 5, 33, 44)
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 6, 33, 44)
     elseif (self.fzf_case_mode == 2) then
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 5, 45, 58)
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 6, 45, 58)
     end
 
     -- Fuzzy match
     vim.api.nvim_buf_set_lines(self.buf_id, -1, -1, false,
       { '-F: Fuzzy search [true, false]' })
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInfo', 6, 0, 2)
-    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInactive', 6, 17, -1)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInfo', 7, 0, 2)
+    vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilInactive', 7, 17, -1)
     if (self.fzf_fuzzy_match) then
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 6, 18, 22)
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 7, 18, 22)
     else
-      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 6, 24, 29)
+      vim.api.nvim_buf_add_highlight(self.buf_id, self.config_window_ns_id, 'BroilActive', 7, 24, 29)
     end
   end
 
@@ -215,7 +229,12 @@ function Config:toggle_search_mode()
 end
 
 function Config:toggle_sort()
-  self.sort_option = (self.sort_option + 1) % 4
+  self.sort_option = (self.sort_option + 1) % 5
+  self:render_config_settings()
+end
+
+function Config:toggle_sort_order()
+  self.sort_order = (self.sort_order + 1) % 2
   self:render_config_settings()
 end
 
