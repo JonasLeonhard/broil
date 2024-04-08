@@ -78,7 +78,7 @@ local Config = {
   fzf_case_mode = 0,  -- case_mode: number with 0 = smart_case, 1 = ignore_case, 2 = respect_case
   fzf_fuzzy_match = true,
   show_hidden = true, -- files/dirs with '.'
-  sort_option = 0,    -- 0 = 'Type',  1 = 'Size', 2 = 'Alphabetical'
+  sort_option = 0,    -- 0 = 'Type',  1 = 'Size', 2 = 'Alphabetical', 3 = 'Children_count', 4 = 'Date_modified'
   sort_order = 0,     -- 0 = 'Ascending', 1 = 'Descending'
   file_size_preview_limit_mb = 5,
 
