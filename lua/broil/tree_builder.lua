@@ -352,13 +352,19 @@ function Tree_Builder:as_tree(bline_ids)
         else
           sort_prefix = vim.fn.expand(bline.path .. ':e') -- path_extension
         end
-      else
+      elseif (config.sort_option == 1) then
         -- 1 = 'TypeDirsLast'
         if (bline.file_type == 'directory') then
           sort_prefix = '~~~~~~~~~~~~~~'
         else
           sort_prefix = vim.fn.expand(bline.path .. ':e') -- path_extension
         end
+      elseif (config.sort_option == 2) then
+        -- Size
+        sort_prefix = bline.fs_stat.size
+      elseif (config.sort_option == 3) then
+        -- Alphabetical
+        sort_prefix = bline.name
       end
       sort_path = string.format("%s%s-%s/%s", sort_prefix, bline.name:lower(), bline.id, sort_path)
       if (bid_parents[bid]) then
