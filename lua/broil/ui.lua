@@ -216,7 +216,8 @@ ui.preview_hovered_node = function()
 
       Path:new(bline.path):_read_async(vim.schedule_wrap(function(data)
         local lines = {}
-        for line in string.gmatch(data, "[^\r\n]+") do
+        for line in string.gmatch(data, "([^\r\n]*\n)") do
+          line = line:gsub("\n", " ") -- replace newline characters with spaces
           table.insert(lines, line)
         end
         vim.api.nvim_set_option_value('modifiable', true, { buf = ui.preview_buf_id })
@@ -228,6 +229,9 @@ ui.preview_hovered_node = function()
         if (config.search_mode == 1 and #bline.grep_results > 0) then
           local first_result = bline.grep_results[1]
           pcall(vim.api.nvim_win_set_cursor, ui.preview_win_id, { first_result.row, first_result.column })
+          vim.api.nvim_buf_add_highlight(ui.preview_buf_id, ui.search_ns_id, 'BroilSearchTerm', first_result.row - 1,
+            first_result.column - 2,
+            first_result.column_end)
         end
       end))
     end
