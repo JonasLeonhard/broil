@@ -65,8 +65,6 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 - Fuzzy case mode (smart_case, ignore_case, respect_case)
 - Toggle Fuzzy Search
 
-https://github.com/JonasLeonhard/broil/assets/54074887/b6da37ad-9020-47f6-9644-8407f3a91fa7
-
 ## default Motions:
 - gg and g
 - C-j, C-k, j, k - movement
