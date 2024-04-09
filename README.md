@@ -27,10 +27,17 @@ is supported:
 | `!.mp3$`  | inverse-suffix-exact-match | Items that do not end with `.mp3`    |
 
 ## Cross Directory Buffer Editing:
+~ NOTE: this feature is currently experimental and not quite stable, so make sure to look at the edits build from your buffer changes. This feature is not quite ironed out yet! ~
+
 - create, copy, move, rename & delete
 ...by just editing the current tree view buffer:
 
 https://github.com/JonasLeonhard/broil/assets/54074887/1f0843e6-03b7-4210-a0a9-cba2be84e4fd
+
+your edits stay persistent across directories and searches:
+
+https://github.com/JonasLeonhard/broil/assets/54074887/40439dad-6d9c-44a4-98a3-fd8e504124e7
+
 
 - run any terminal command like touch, mkdir, ls, chmod and see the output
 
