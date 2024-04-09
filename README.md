@@ -50,7 +50,7 @@ Search by filecontents using regex that would work in vims string:find('yoursear
 https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-ff65a628c22f
 
 ## Settings
-- Change the search mode (fuzzy searching via file/dir names, or by file contents)
+- Change the search mode (fuzzy searching via file/dir names, or by file contents in the current tree dir)
 - show / hide hidden dot files and directories
 - Sorting by type
 - Sorting alphabetically
@@ -59,6 +59,8 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 - Sort the above (sort order) ascending and descending
 - Fuzzy case mode (smart_case, ignore_case, respect_case)
 - Toggle Fuzzy Search
+
+https://github.com/JonasLeonhard/broil/assets/54074887/b6da37ad-9020-47f6-9644-8407f3a91fa7
 
 ## default Motions:
 - gg and g
@@ -71,8 +73,6 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 - C-w h - change window left
 - C-q - close window
 - ":" in search prompt to run shell command
-
-https://github.com/JonasLeonhard/broil/assets/54074887/b6da37ad-9020-47f6-9644-8407f3a91fa7
 
 # Configuration
 
