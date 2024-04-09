@@ -34,7 +34,7 @@ is supported:
 
 https://github.com/JonasLeonhard/broil/assets/54074887/1f0843e6-03b7-4210-a0a9-cba2be84e4fd
 
-your edits stay persistent across directories and searches:
+your edits stay persistent across directories and searches, only you staged changes will get applied. And if you dont like them, you can undo them in a batch - or one by one:
 
 https://github.com/JonasLeonhard/broil/assets/54074887/40439dad-6d9c-44a4-98a3-fd8e504124e7
 
