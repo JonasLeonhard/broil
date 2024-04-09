@@ -386,6 +386,12 @@ function Tree_Builder:as_tree()
     -- set amount of unlisted children
     bline.unlisted = #bline.children - (bline.next_child_idx - 1)
 
+    -- even though we stop searching when we hit self.optimal_lines * 10 results already in gather lines,
+    -- we need to check, because parent dirs of those matches get rendered aswell. For very deep searches
+    -- this could amount to way too many lines
+    if (bline.depth > 1 and #tree_lines > self.optimal_lines * 10) then
+      return
+    end
     -- always insert all nodes when searching for nothing, otherwise only if it matches
     if (self.pattern == '' or bline.has_match) then
       table.insert(tree_lines, bline)

@@ -201,8 +201,10 @@ ui.preview_hovered_node = function()
       -- check if file is too large to preview
       local mb_filesize = utils.bytes_to_megabytes(bline.fs_stat.size)
       if (mb_filesize > config.file_size_preview_limit_mb) then
+        vim.api.nvim_set_option_value('modifiable', true, { buf = ui.preview_buf_id })
         vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false,
           { "File size limit of " .. config.file_size_preview_limit_mb .. "mb exceeded." })
+        vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
         return
       end
 
