@@ -45,23 +45,33 @@ https://github.com/JonasLeonhard/broil/assets/54074887/18c71a52-4862-4e93-9082-d
 
 ## Content Search
 
-https://github.com/JonasLeonhard/broil/assets/54074887/850e35d5-81e7-411e-8ad1-7b21f0331885
+Search by filecontents using regex that would work in vims string:find('yoursearch')
 
-## Motions:
-- gg and g
-- C-j, C-k, j, k - movement
-- C-l or CR - Open selected
-- C-h - go dir up
+https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-ff65a628c22f
 
 ## Settings
 - Change the search mode (fuzzy searching via file/dir names, or by file contents)
 - show / hide hidden dot files and directories
-- Sorting by dir_first
-- Sorting by files_first
-- Sorting alphabetically (TODO)
-- Sorting by size (TODO)
+- Sorting by type
+- Sorting alphabetically
+- Sorting by size
+- Sorting by children_count
+- Sort the above (sort order) ascending and descending
 - Fuzzy case mode (smart_case, ignore_case, respect_case)
 - Toggle Fuzzy Search
+
+## default Motions:
+- gg and g
+- C-j, C-k, j, k - movement
+- C-l or CR - Open selected
+- C-h - go dir up
+- C-w k - change window up
+- C-w j - change window down
+- C-w l - change window right
+- C-w h - change window left
+- C-q - close window
+- ":" in search prompt to run shell command
+
 
 https://github.com/JonasLeonhard/broil/assets/54074887/02f523ba-8964-4785-8bff-9d2f809bb63e
 
