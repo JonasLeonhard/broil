@@ -41,6 +41,11 @@ https://github.com/JonasLeonhard/broil/assets/54074887/40439dad-6d9c-44a4-98a3-f
 
 - run any terminal command like touch, mkdir, ls, chmod and see the output
 
+Some chars combinations in the terminal mode get autofilled:
+- "%<space>" = path of the currently selected node
+- "%n<space>" = name of the currently selected node
+- ".<space>" = path of the currently opened tree view
+
 https://github.com/JonasLeonhard/broil/assets/54074887/18c71a52-4862-4e93-9082-d288853f71c2
 
 ## Content Search
