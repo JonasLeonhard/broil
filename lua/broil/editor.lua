@@ -40,8 +40,8 @@ function Editor:handle_edits(tree, editing)
   end
 
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
-  for index, line in ipairs(current_lines) do
-    if (editing) then
+  if (editing) then
+    for index, line in ipairs(current_lines) do
       self:build_new_and_edited(index, line, current_lines, tree)
     end
   end

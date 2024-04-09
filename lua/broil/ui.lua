@@ -184,7 +184,12 @@ ui.preview_hovered_node = function()
 
         vim.api.nvim_set_option_value('modifiable', true, { buf = ui.preview_buf_id })
         ui.prev_tree:render()
-        ui.editor:handle_edits(ui.prev_tree, false)
+
+        local current_lines = vim.api.nvim_buf_get_lines(ui.prev_tree.buf_id, 0, -1, false)
+        for index, line in ipairs(current_lines) do
+          ui.prev_tree:draw_line_extmarks(index, line, current_lines)
+        end
+
         vim.api.nvim_set_option_value('modifiable', false, { buf = ui.preview_buf_id })
 
         ui.prev_tree:initial_selection()
