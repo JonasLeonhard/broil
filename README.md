@@ -72,9 +72,7 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 - C-q - close window
 - ":" in search prompt to run shell command
 
-
-https://github.com/JonasLeonhard/broil/assets/54074887/02f523ba-8964-4785-8bff-9d2f809bb63e
-
+https://github.com/JonasLeonhard/broil/assets/54074887/b6da37ad-9020-47f6-9644-8407f3a91fa7
 
 # Configuration
 
