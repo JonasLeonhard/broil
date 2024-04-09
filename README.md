@@ -30,7 +30,7 @@ is supported:
 - create, copy, move, rename & delete
 ...by just editing the current tree view buffer:
 
-https://github.com/JonasLeonhard/broil/assets/54074887/2bd63166-434f-4a2c-8e22-539e2ce868d2
+https://github.com/JonasLeonhard/broil/assets/54074887/1f0843e6-03b7-4210-a0a9-cba2be84e4fd
 
 - run any terminal command like touch, mkdir, ls, chmod and see the output
 
