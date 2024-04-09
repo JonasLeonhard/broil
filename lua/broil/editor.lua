@@ -156,6 +156,10 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
 
       if (status == 'copy') then
         id = '=' .. id
+
+        if (path_to == nil) then
+          return
+        end
       end
 
       local already_staged = nil
