@@ -315,7 +315,14 @@ function Tree_Builder:sorted_children(children)
       local bline_a = self.blines[a]
       local bline_b = self.blines[b]
       if (config.sort_order == 1) then
+        if (bline_a.file_type == bline_b.file_type) then
+          return bline_a.name:lower() > bline_b.name:lower()
+        end
         return bline_a.file_type > bline_b.file_type
+      end
+
+      if (bline_a.file_type == bline_b.file_type) then
+        return bline_a.name:lower() < bline_b.name:lower()
       end
       return bline_a.file_type < bline_b.file_type
     end)
