@@ -663,7 +663,13 @@ ui.on_yank = function()
         if (path_id) then
           local bline = ui.tree:find_by_id(path_id)
           if (bline) then
-            yanked_text[i] = bline.name .. '[' .. bline.id .. ']'
+            local new_text = bline.name
+            if (bline.file_type == "directory") then
+              new_text = new_text .. '/'
+            end
+            new_text = new_text .. '[' .. path_id .. ']'
+
+            yanked_text[i] = new_text
           end
         end
       end

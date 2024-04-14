@@ -147,8 +147,8 @@ function Editor:build_new_and_edited(index, line, current_lines, tree)
       end
 
       if (path_from and path_to) then
-        local from_dir = vim.fn.fnamemodify(path_from, ':h');
-        local to_dir = vim.fn.fnamemodify(path_to, ':h');
+        local from_dir = vim.fn.fnamemodify(path_from:gsub("%/$", ""), ':h');
+        local to_dir = vim.fn.fnamemodify(path_to:gsub("%/$", ""), ':h');
         if (from_dir == to_dir) then
           status = 'move'
         end
