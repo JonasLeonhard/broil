@@ -65,7 +65,7 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 - Fuzzy case mode (smart_case, ignore_case, respect_case)
 - Toggle Fuzzy Search
 
-## default Motions:
+## default Keybindy:
 - gg and g
 - C-j, C-k, j, k - movement
 - C-l or CR - Open selected
@@ -76,6 +76,8 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 - C-w h - change window left
 - C-q - close window
 - ":" in search prompt to run shell command
+- C-e show edits
+- C-c show config
 
 # Configuration
 
