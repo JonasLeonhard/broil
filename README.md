@@ -100,8 +100,8 @@ return {
     }
   },
   opts = {
-    rm_command = 'rm', -- optional...(default 'rm'). you could use a trash command here. Or rm --trash for nushell...
-    -- ... you can find more opts in lua/broil/config.lua
+    -- rm_command = 'rm <FROM>', -- optional...(default 'rm'). you could use a trash command here. Or rm --trash for nushell...
+    -- ... you can find more opts in ":h broil" or lua/broil/config.lua
   },
   keys = {
     {
