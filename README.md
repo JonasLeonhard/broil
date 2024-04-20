@@ -121,7 +121,8 @@ return {
 </details>
 
 # Contributing
+Want to help me make this plugin better? Create a pull request!
 
 # License
-
+MIT
 
