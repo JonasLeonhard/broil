@@ -1,0 +1,265 @@
+*broil.txt* Edit and search your directory tree like a buffer. The explosive mixture of broot and oil you never knew you needed!.
+
+*Broil* *broil* *broil.nvim*
+--------------------------------------------------------------------------------
+CONTENTS                                                        *broil-contents*
+
+  1. Config                                                       |broil-config|
+  2. Options                                                     |broil-options|
+  3. Api                                                             |broil-api|
+  4. Actions                                                     |broil-actions|
+  5. Highlights                                               |broil-highlights|
+
+--------------------------------------------------------------------------------
+CONFIG                                                            *broil-config*
+
+Minimal Config (lazy.nvim)
+
+>lua
+return {
+  'JonasLeonhard/broil',
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "nvim-tree/nvim-web-devicons",
+    {
+      'nvim-telescope/telescope-fzf-native.nvim',
+      cond = function()
+        return vim.fn.executable 'make' == 1
+      end,
+      build =
+      'make'
+    }
+  },
+  opts = {
+    -- you could use different commands here, the default works for nushell and bash
+    -- for all options, take a look at lua/broil/config.lua
+    -- mv_command = 'mv <FROM> <TO>',
+    -- rm_command = 'rm -r --trash <FROM>', -- think about using a trash rm command?
+    -- mkdir_command = 'mkdir <TO>',
+    -- touch_command = 'mkdir (dirname <TO>); touch <TO>',
+  },
+  dev = true, -- This will use {config.dev.path}/broil/ instead of fetching it from Github
+  keys = {
+    {
+      '<leader>o',
+      "<cmd>lua require('broil').open()<cr>", -- opens current %:h or cwd by default
+      desc = 'Broil open',
+    },
+    {
+      '<leader>O',
+      "<cmd>lua require('broil').open(vim.fn.getcwd())<cr>",
+      desc = 'Broil open',
+    },
+  },
+}
+
+Maximal Config (lazy.nvim)
+
+>lua
+>return {
+  'JonasLeonhard/broil',
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "nvim-tree/nvim-web-devicons",
+    {
+      'nvim-telescope/telescope-fzf-native.nvim',
+      cond = function()
+        return vim.fn.executable 'make' == 1
+      end,
+      build =
+      'make'
+    }
+  },
+  opts = {
+    mappings = {
+      -- general
+      help = '?',
+      close = '<C-q>',
+      pop_history = '<C-p>',
+      open_edits_float = '<C-e>',
+      open_config_float = '<C-c>',
+
+      -- search
+      select_next_node = '<C-j>',
+      select_next_node_normal = 'j',
+      select_prev_node = '<C-k>',
+      select_prev_node_normal = 'k',
+      open_selected_node = '<CR>',
+      open_selected_node2 = '<C-l>',
+      open_parent_dir = '<C-h>',
+
+      -- edits window
+      stage_edit = 's',
+      stage_all_edits = 'S',
+      stage_all_edits2 = '<c-s>',
+      unstage_edit = 'u',
+      unstage_all_edits = 'U',
+      undo_edit = 'x',
+      apply_staged_edits = '<c-y>'
+    },
+    -- no enter means a search wont enter the directory
+    -- hide means the file will not be visible and not entered in search (unless
+    -- show_hidden is set)
+    special_paths = {
+      ["media"] = "no-enter",
+      [".git"] = "no-enter",
+      ["node_modules"] = "no-enter",
+      ["vendor"] = "no-enter",
+      [".svelte-kit"] = "no-enter",
+      ["dist"] = "no-enter",
+      ["target"] = "no-enter",
+      ["debug"] = "no-enter",
+      ["release"] = "no-enter",
+      ["build"] = "no-enter",
+      ["tmp"] = "no-enter",
+      [".next"] = "no-enter",
+      [".DS_Store"] = "hide",
+    },
+
+    -- runtime configs, you can change them in the config interface running "<C-c>" by default.
+    search_mode = 0,    -- 0 = 'fuzzy_find', 1 = 'grep'
+    fzf_case_mode = 0,  -- case_mode: number with 0 = smart_case, 1 = ignore_case, 2 = respect_case
+    fzf_fuzzy_match = true,
+    show_hidden = true, -- files/dirs with '.'
+    sort_option = 0,    -- 0 = 'Type',  1 = 'Size', 2 = 'Alphabetical', 3 = 'Children_count', 4 = 'Date_modified'
+    sort_order = 0,     -- 0 = 'Ascending', 1 = 'Descending'
+    file_size_preview_limit_mb = 5,
+
+    -- you can change the shell for you commands here.
+    -- Normally you dont need to do that.
+    shell = vim.o.shell,
+    shell_exec_flag = '-c', -- will result in `sh -c 'command_below'`
+
+    -- filesystem commands
+    -- <FROM> and <TO> will be shell-escaped and replaced with actual paths.
+    -- These are the defaults:
+    -- (there are other defaults for nushell, see lua/broil/config.lua)
+    rm_command = 'rm -r <FROM>',
+    mv_command = 'mv <FROM> <TO>',
+    cp_command = 'cp <FROM> <TO>',
+    mkdir_command = 'mkdir -p <TO>',
+    touch_command = 'mkdir -p (dirname <TO>); touch <TO>',
+  },
+  keys = {
+    {
+      '<leader>o',
+      "<cmd>lua require('broil').open()<cr>", -- opens current %:h or cwd by default
+      desc = 'Broil open',
+    },
+    {
+      '<leader>O',
+      "<cmd>lua require('broil').open(vim.fn.getcwd())<cr>",
+      desc = 'Broil open',
+    },
+  },
+}
+
+--------------------------------------------------------------------------------
+Api                                                                  *broil-api*
+
+require('broil').open()                                             *broil.open*
+  Opens broil in a floating window at the given path, or at the dir of the
+  currently opened buffer
+
+  Parameters:
+    {path}: optional filepath
+
+
+--------------------------------------------------------------------------------
+Actions                                                          *broil-actions*
+
+After you opened broil with the .open() api in a floating window. The following
+default actions are possible:
+
+1. Search
+Input something in the search bar at the bottom. It will fuzzy filter the tree
+from the current path.
+You can change the search mode from fuzzy to content search by pressing "<C-c"
+to open the config menu, and pressing "m" to change the search mode to
+"content". This will search the content of the files.
+
+2. Terminal Commands
+When you type ":" in the search buffer, you change to command mode. Everything
+you type after the ":" will be executed in you shell.
+Eg: typing ":ls -la" will execute "ls -la" in you terminal at the current tree
+window path and show its output.
+
+In command mode some commands have special meaning:
+
+Try typing on of the following and see the text beeing replaced:
+
+"%<space>": selection_path
+"%n": selection_name
+".<space>": view_path
+
+2. Change Selection in the tree view
+
+<C-j>: "select_next"
+<C-k>: "select_prev"
+<C-l> or <CR>: "open"
+<C-h>: "goto_parent"
+
+3. Edit
+
+To enter the edit window. Use "<C-w>k" to enter the view. Or "<C-w>j" to leave
+it.
+
+See the number in brackets:
+---
+      doc/[4]
+         broil.txt[6]
+         tags[7]
+      lua/[5]
+         broil/[8]
+            bline.lua[9]
+            cache.lua[10]
+---
+
+Thats how broil keeps track of lines that move to another directory.
+So lets say we delete line [9] and move it to doc/[4] like this:
+
+Now we can press: "<C-e>" to open the edits window:
+
+----
+Unstaged edits: (1)
+
+MOVE      /Users/jonas/Documents/Git/broil/lua/broil/bline.lua -> /Users/jonas/Documents/Git/broil/doc/bline.lua [=9]
+
+Staged edits: (0)
+
+----
+
+If we want apply this edit, we can stage it by pressing "s" with our cursor
+ontop of the line. Or "<C-s>" to stage all edits.
+
+If we press "<C-y>" here. We will apply the edit.
+
+
+4. Close
+
+<C-q>: "close"
+
+--------------------------------------------------------------------------------
+Highlights                                                    *broil-highlights*
+
+  -- highlights groups used in broil (see. init.lua)
+  vim.api.nvim_command('highlight BroilPreviewMessageFillchar guifg=#585b70')
+  vim.api.nvim_command('highlight BroilPreviewMessage guifg=#b4befe')
+  vim.api.nvim_command('highlight BroilDeleted guifg=#f38ba8')
+  vim.api.nvim_command('highlight BroilEdited guifg=#f9e2af')
+  vim.api.nvim_command('highlight BroilAdded guifg=#a6e3a1')
+  vim.api.nvim_command('highlight BroilCopy guifg=#89dceb')
+  vim.api.nvim_command('highlight BroilSearchTerm guifg=#f9e2af')
+  vim.api.nvim_command('highlight BroilDirLine guifg=#89b4fa')
+  vim.api.nvim_command('highlight BroilPruningLine guifg=#a6adc8')
+  vim.api.nvim_command('highlight BroilRelativeLine guifg=#74c7ec')
+  vim.api.nvim_command('highlight BroilHelpCommand guifg=#b4befe')
+  vim.api.nvim_command('highlight BroilEditorHeadline guifg=#cba6f7')
+  vim.api.nvim_command('highlight BroilQueued guifg=#94e2d5')
+  vim.api.nvim_command('highlight BroilInfo guifg=#b4befe')
+  vim.api.nvim_command('highlight BroilInactive guifg=#a6adc8')
+  vim.api.nvim_command('highlight BroilActive guifg=#f2cdcd')
+  vim.api.nvim_command('highlight BroilSearchIcon guifg=#bac2de')
+
+================================================================================
+vim:tw=80:ts=2:ft=help:norl:syntax=help:
