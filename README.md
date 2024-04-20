@@ -114,8 +114,7 @@ return {
       "<cmd>lua require('broil').open(vim.fn.getcwd())<cr>",
       desc = 'Broil open cwd',
     },
-  },
-  enabled = true
+  }
 }
 ```
 </details>
