@@ -2,6 +2,9 @@
 Navigate Directories like <a href="https://github.com/Canop/broot" target="_blank">Broot</a>,
 and edit like <a href="https://github.com/stevearc/oil.nvim">Oil</a>.
 
+⚠️ This Plugin is in Beta. So expect stuff to not 100% work and expect breaking changes at any point.
+Especially make sure that the paths in your edits actually match what was beeing edited!
+
 # Features
 
 ## Tree View & Fuzzy Search
@@ -27,7 +30,7 @@ is supported:
 | `!.mp3$`  | inverse-suffix-exact-match | Items that do not end with `.mp3`    |
 
 ## Cross Directory Buffer Editing:
-~ NOTE: this feature is currently experimental and not quite stable, so make sure to look at the edits build from your buffer changes. This feature is not quite ironed out yet! ~
+~ ⚠️ NOTE: this feature is currently experimental and not quite stable, so make sure to look at the edits build from your buffer changes. This feature is not quite ironed out yet! ~
 
 - create, copy, move, rename & delete
 ...by just editing the current tree view buffer:
