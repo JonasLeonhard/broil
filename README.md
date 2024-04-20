@@ -1,6 +1,6 @@
 # Broil = Broot + Oil
-Navigate Directories like <a href="https://github.com/Canop/broot" target="_blank">Broot</a>,
-and edit like <a href="https://github.com/stevearc/oil.nvim">Oil</a>.
+Edit and search your directory tree like a buffer. 
+The explosive mixture of <a href="https://github.com/Canop/broot" target="_blank">Broot</a> and <a href="https://github.com/stevearc/oil.nvim">Oil</a> you never knew you needed!. 
 
 ⚠️ This Plugin is in Beta. So expect stuff to not 100% work and expect breaking changes at any point.
 Especially make sure that the paths in your edits actually match what was beeing edited!
