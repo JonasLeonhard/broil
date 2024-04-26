@@ -71,6 +71,7 @@ local Config = {
     ["tmp"] = "no-enter",
     [".next"] = "no-enter",
     [".DS_Store"] = "hide",
+    [".godot"] = "no-enter"
   },
 
   -- runtime configs
