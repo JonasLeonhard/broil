@@ -225,7 +225,7 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     return nil
   end
 
-  if (config.special_paths[name] == 'hide') then
+  if (config.special_paths[name] == 'hide' and not config.show_special_paths_hide) then
     return nil
   end
 
