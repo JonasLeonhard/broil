@@ -71,7 +71,8 @@ local Config = {
     ["tmp"] = "no-enter",
     [".next"] = "no-enter",
     [".DS_Store"] = "hide",
-    [".godot"] = "no-enter"
+    [".godot"] = "no-enter",
+    ["storybook-static"] = "no-enter"
   },
 
   -- runtime configs
