@@ -58,21 +58,22 @@ local Config = {
     apply_staged_edits = '<c-y>'
   },
   special_paths = {
-    ["media"] = "no-enter",
-    [".git"] = "no-enter",
-    ["node_modules"] = "no-enter",
-    ["vendor"] = "no-enter",
-    [".svelte-kit"] = "no-enter",
-    ["dist"] = "no-enter",
-    ["target"] = "no-enter",
-    ["debug"] = "no-enter",
-    ["release"] = "no-enter",
-    ["build"] = "no-enter",
-    ["tmp"] = "no-enter",
-    [".next"] = "no-enter",
     [".DS_Store"] = "hide",
+    [".git"] = "no-enter",
     [".godot"] = "no-enter",
-    ["storybook-static"] = "no-enter"
+    [".next"] = "no-enter",
+    [".svelte-kit"] = "no-enter",
+    ["build"] = "no-enter",
+    ["debug"] = "no-enter",
+    ["dist"] = "no-enter",
+    ["media"] = "no-enter",
+    ["node_modules"] = "no-enter",
+    ["release"] = "no-enter",
+    ["storybook-static"] = "no-enter",
+    ["target"] = "no-enter",
+    ["tmp"] = "no-enter",
+    ["vendor"] = "no-enter",
+    ["zig-cache"] = "no-enter"
   },
 
   -- runtime configs
