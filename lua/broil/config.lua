@@ -59,6 +59,7 @@ local Config = {
   },
   special_paths = {
     [".DS_Store"] = "hide",
+    [".astro"] = "no-enter",
     [".git"] = "no-enter",
     [".godot"] = "no-enter",
     [".next"] = "no-enter",
