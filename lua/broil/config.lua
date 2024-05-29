@@ -103,6 +103,7 @@ local Config = {
   config_window_ns_id = vim.api.nvim_create_namespace('BroilConfigWindow'),
 
   -- search
+  maximum_search_time_sec = 0.5, -- when to stop gathering lines. Longer time might yield better and deeper matches at the cost of general speed
   search_debounce = 35,
   spinner_debounce = 200,
   preview_debounce = 50,

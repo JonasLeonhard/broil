@@ -759,7 +759,7 @@ ui.render = function(selection_index)
     local builder = Tree_Builder:new(ui.open_path, {
       pattern = ui.search_term,
       optimal_lines = ui.tree_win.height,
-      maximum_search_time_sec = 1,
+      maximum_search_time_sec = config.maximum_search_time_sec,
       current_edits = ui.editor.current_edits,
     })
 
