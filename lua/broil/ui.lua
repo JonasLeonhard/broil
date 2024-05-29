@@ -314,6 +314,7 @@ ui.on_search_input_listener = function()
       else
         ui.set_verb()
       end
+
       if (previous_search_term ~= ui.search_term) then
         utils.debounce("search", function()
           ui.render()
@@ -727,6 +728,12 @@ ui.close_config_float = function()
   ui.render()
 end
 
+-- global ui.render metadata
+local global_render_index = 0
+local new_render_started = function(compare_render_index)
+  return global_render_index > compare_render_index;
+end
+
 --- @param selection_index number|nil line nr to select after the render. If nil, select the highest score
 ui.render = function(selection_index)
   if (not ui.spinner_timer) then
@@ -737,8 +744,16 @@ ui.render = function(selection_index)
   end
 
   local render_async = async.void(function()
+    -- keep track if another render started
+    global_render_index = global_render_index + 1
+    local current_render_index = global_render_index;
+
     if (ui.open_history[#ui.open_history] ~= ui.open_path) then -- add the path to the history if its not the same
       table.insert(ui.open_history, ui.open_path)
+    end
+
+    if (new_render_started(current_render_index)) then
+      return;
     end
 
     local builder = Tree_Builder:new(ui.open_path, {
@@ -747,7 +762,17 @@ ui.render = function(selection_index)
       maximum_search_time_sec = 1,
       current_edits = ui.editor.current_edits,
     })
+
+    if (new_render_started(current_render_index)) then
+      return;
+    end
+
     local tree_build = builder:build_tree()
+    builder:destroy()
+    if (new_render_started(current_render_index)) then
+      return;
+    end
+
     ui.tree = Tree:new({
       pattern = ui.search_term,
       buf_id = ui.buf_id,
@@ -756,11 +781,33 @@ ui.render = function(selection_index)
       highest_score_index = tree_build.highest_score_index,
       open_path_index = tree_build.open_path_index
     })
+
+    if (new_render_started(current_render_index)) then
+      return;
+    end
+
     ui.tree:render()
+
+    if (new_render_started(current_render_index)) then
+      return;
+    end
+
     ui.tree:initial_selection(selection_index)
-    builder:destroy()
+
+    if (new_render_started(current_render_index)) then
+      return;
+    end
+
     ui.editor:append_new_lines_from_edits(ui.tree)
+
+    if (new_render_started(current_render_index)) then
+      return;
+    end
     ui.editor:handle_edits(ui.tree, false)
+
+    if (new_render_started(current_render_index)) then
+      return;
+    end
 
     ui.open_dir = builder.path
     ui.render_start = builder.build_start
