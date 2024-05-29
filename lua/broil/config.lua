@@ -103,7 +103,7 @@ local Config = {
   config_window_ns_id = vim.api.nvim_create_namespace('BroilConfigWindow'),
 
   -- search
-  search_debounce = 100,
+  search_debounce = 25, -- TODO: cancel last search input when you make a new one
   spinner_debounce = 200,
   preview_debounce = 200
 }
