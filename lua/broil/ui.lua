@@ -235,7 +235,7 @@ ui.preview_hovered_node = function()
         end
       end))
     end
-  end, 200)()
+  end, config.preview_debounce)()
 end
 
 --- @param msg string|nil
@@ -317,7 +317,7 @@ ui.on_search_input_listener = function()
       if (previous_search_term ~= ui.search_term) then
         utils.debounce("search", function()
           ui.render()
-        end, 100)()
+        end, config.search_debounce)()
       end
 
       ui.set_search_input_sign_and_highlight()
@@ -773,7 +773,7 @@ ui.render = function(selection_index)
         ui.spinner_timer = nil
       end
       ui.set_info_bar_message()
-    end, 200)()
+    end, config.spinner_debounce)()
   end)
 
   async.run(render_async)

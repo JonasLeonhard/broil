@@ -100,7 +100,12 @@ local Config = {
   -- internal config window
   buf_id = vim.api.nvim_create_buf(false, true),
   win_id = nil,
-  config_window_ns_id = vim.api.nvim_create_namespace('BroilConfigWindow')
+  config_window_ns_id = vim.api.nvim_create_namespace('BroilConfigWindow'),
+
+  -- search
+  search_debounce = 100,
+  spinner_debounce = 200,
+  preview_debounce = 200
 }
 
 --- @param opts table|nil configuration See |broil.config|.
