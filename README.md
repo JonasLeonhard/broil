@@ -5,7 +5,7 @@ The explosive mixture of <a href="https://github.com/Canop/broot" target="_blank
 ⚠️ This Plugin is in Beta. So expect stuff to not 100% work and expect breaking changes at any point.
 Especially make sure that the paths in your edits actually match what was beeing edited!
 
-requirements: Latest master branch version of neovim
+tested on: Latest master branch version of neovim, (Macos & Linux)
 
 # Features
 
