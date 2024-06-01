@@ -32,7 +32,11 @@ function BLine:new(options)
 end
 
 function BLine:can_enter()
-  return self.file_type == "directory" and config.special_paths[self.name] ~= 'no-enter'
+  if not config.enter_no_enter_special_paths then
+    return self.file_type == "directory" and config.special_paths[self.name] ~= 'no-enter'
+  end
+
+  return self.file_type == "directory"
 end
 
 --- @param callback function -> callback({ name, type })
