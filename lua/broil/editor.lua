@@ -32,7 +32,7 @@ function Editor:handle_edits(tree, editing)
 
   -- we cannot have deletions in the buffer if we are in a rerender
   for _, bline in ipairs(tree.lines) do
-    self:build_deleted_and_remove_children(bline, tree)
+    self:build_deleted_and_remove_children(bline, tree, editing)
   end
 
   if (not editing) then
@@ -218,23 +218,23 @@ function Editor:line_get_parent_by_indent(line, index, tree, current_lines)
   return parent_bline_dir_by_indent, parent_new_edit_dir_by_indent
 end
 
-function Editor:build_deleted_and_remove_children(bline, tree)
+function Editor:build_deleted_and_remove_children(bline, tree, editing)
   if (not bline or bline.line_type == 'pruning') then
     return
   end
 
+  local id = '-' .. tostring(bline.id)
+
+  if (not editing and self.current_edits[id]) then
+    return tree:remove_children({ bline.id })
+  end
+
   local current_line_exists = false
-  local new_line = nil
   local current_lines = vim.api.nvim_buf_get_lines(tree.buf_id, 0, -1, false)
 
-  -- check if the line was deleted in an edit. if so remove it
   -- check if a line with the bid exists after editing
   local path_id = nil
   for index, line in ipairs(current_lines) do
-    if (bline.edit and bline.edit.status == 'delete') then
-      tree:remove_children({ bline.id })
-    end
-
     path_id = utils.get_bid_by_match(line)
     if (path_id == bline.id) then
       local parent_bline_dir_by_indent = self:line_get_parent_by_indent(line,
@@ -242,21 +242,19 @@ function Editor:build_deleted_and_remove_children(bline, tree)
 
       if (not parent_bline_dir_by_indent or not bline.parent_id or parent_bline_dir_by_indent.id == bline.parent_id) then
         current_line_exists = true
-        new_line = line
         break
       end
     end
   end
 
-
-  local id = '-' .. tostring(bline.id)
-
   -- if not, we deleted it
   if (not current_line_exists) then
+    -- make sure all children are deleted aswell!
     if (bline.file_type == 'directory') then
       tree:remove_children(bline.children)
     end
 
+    -- build the actual edit
     local path_from = bline.path
     if (bline.file_type == 'directory') then
       path_from = bline.path .. '/'
@@ -272,7 +270,7 @@ function Editor:build_deleted_and_remove_children(bline, tree)
       path_to = nil,
       staged = already_staged or false,
       status = 'delete',
-      line = new_line,
+      line = nil,
       job_out = nil
     }
   else
