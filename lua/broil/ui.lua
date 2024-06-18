@@ -249,7 +249,12 @@ ui.set_info_bar_message = function(msg, type)
       time_str = "  |'" .. vim.fn.reltimestr(time_diff):gsub(" ", "") .. "sec'"
     end
 
-    msg = "Hit '" ..
+    local root_path = ''
+    if (ui.tree) then
+      root_path = "'" .. ui.tree.lines[1].path .. "' | "
+    end
+
+    msg = root_path .. "Hit '" ..
         config.mappings.open_selected_node ..
         '|' ..
         config.mappings.open_selected_node2 ..
