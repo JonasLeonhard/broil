@@ -497,6 +497,13 @@ ui.open_selected_node_or_run_verb = function(just_open)
 end
 
 ui.run_current_verb = function()
+  -- save the last hovered line to reselect after the next render
+  local cursor_pos = vim.api.nvim_win_get_cursor(ui.win_id)
+  local cursor_y = cursor_pos[1]
+  local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, cursor_y - 1, cursor_y, false)[1]
+  local path_id = utils.get_bid_by_match(cursor_line)
+  local bline = ui.tree:find_by_id(path_id)
+
   -- open split above ui.win_id
   -- create a floating terminal window
   local term_buf_id = vim.api.nvim_create_buf(false, true)
@@ -516,8 +523,7 @@ ui.run_current_verb = function()
   vim.api.nvim_create_autocmd({ "WinClosed" }, {
     buffer = term_buf_id,
     callback = function()
-      local win_cursor = vim.api.nvim_win_get_cursor(ui.win_id)
-      ui.render(win_cursor[1])
+      ui.render(bline.id)
     end
   })
 end
@@ -538,7 +544,7 @@ ui.open_parent_dir = function()
 
   if (parent_dir) then
     ui.open_path = parent_dir
-    ui.render()
+    ui.render(node.id)
   end
 end
 
@@ -734,8 +740,8 @@ local new_render_started = function(compare_render_index)
   return global_render_index > compare_render_index;
 end
 
---- @param selection_index number|nil line nr to select after the render. If nil, select the highest score
-ui.render = function(selection_index)
+--- @param selection_id number|nil node id to select after the render. If nil, select the highest score
+ui.render = function(selection_id)
   if (not ui.spinner_timer) then
     ui.set_info_bar_message(nil, 'search')
     ui.spinner_timer = vim.fn.timer_start(100, function()
@@ -792,7 +798,7 @@ ui.render = function(selection_index)
       return;
     end
 
-    ui.tree:initial_selection(selection_index)
+    ui.tree:initial_selection(selection_id)
 
     if (new_render_started(current_render_index)) then
       return;
