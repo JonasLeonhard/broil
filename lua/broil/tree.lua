@@ -249,7 +249,7 @@ end
 
 --- @param selection_id number|nil the inistal index to select. Nil = select the highest score
 function Tree:initial_selection(selection_id)
-  if (selection_id) then
+  if (self.pattern == '' and selection_id) then
     for index, bline in ipairs(self.lines) do
       if (bline.id == selection_id) then
       vim.api.nvim_win_set_cursor(self.win_id, { index, 0 })
