@@ -764,6 +764,12 @@ ui.open_config_float = function()
 	ui.set_info_bar_message("Type: '<KEY>' to toggle setting. ESC or <C-q> to close.")
 end
 
+ui.open_in_netrw = function()
+	ui.close()
+	-- open the current directory in netrw
+	vim.api.nvim_command("Hexplore " .. ui.open_path)
+end
+
 ui.close_config_float = function()
 	config:close_config_float()
 	ui.set_info_bar_message()
