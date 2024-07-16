@@ -39,7 +39,7 @@ local Config = {
 		open_edits_float = "<C-e>",
 		open_config_float = "<C-c>",
 
-		open_in_netrw = "<C-z>",
+		open_in_netrw = "<C-i>",
 
 		-- search
 		select_next_node = "<C-j>",
