@@ -39,7 +39,7 @@ local Config = {
 		open_edits_float = "<C-e>",
 		open_config_float = "<C-c>",
 
-		open_in_netrw = "<C-i>",
+		open_in_netrw = "<C-z>",
 
 		-- search
 		select_next_node = "<C-j>",
@@ -80,14 +80,14 @@ local Config = {
 	},
 
 	-- runtime configs
-	search_mode = 0, -- 0 = 'fuzzy_find', 1 = 'grep'
-	fzf_case_mode = 0, -- case_mode: number with 0 = smart_case, 1 = ignore_case, 2 = respect_case
+	search_mode = 0,                     -- 0 = 'fuzzy_find', 1 = 'grep'
+	fzf_case_mode = 0,                   -- case_mode: number with 0 = smart_case, 1 = ignore_case, 2 = respect_case
 	fzf_fuzzy_match = true,
-	show_hidden = true, -- files/dirs with '.'
-	show_special_paths_hide = false, -- files/dirs with special_path == 'hide'
+	show_hidden = true,                  -- files/dirs with '.'
+	show_special_paths_hide = false,     -- files/dirs with special_path == 'hide'
 	enter_no_enter_special_paths = false, -- no-enter dirs with special_path == 'no-enter',
-	sort_option = 0, -- 0 = 'Type',  1 = 'Size', 2 = 'Alphabetical', 3 = 'Children_count', 4 = 'Date_modified'
-	sort_order = 0, -- 0 = 'Ascending', 1 = 'Descending'
+	sort_option = 0,                     -- 0 = 'Type',  1 = 'Size', 2 = 'Alphabetical', 3 = 'Children_count', 4 = 'Date_modified'
+	sort_order = 0,                      -- 0 = 'Ascending', 1 = 'Descending'
 	file_size_preview_limit_mb = 5,
 
 	shell = vim.o.shell,
