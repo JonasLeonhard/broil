@@ -219,15 +219,10 @@ ui.preview_hovered_node = function()
 			end
 
 			Path:new(bline.path):_read_async(vim.schedule_wrap(function(data)
-				local lines = {}
-				for line in string.gmatch(data, "([^\r\n]*\n)") do
-					line = line:gsub("\n", " ") -- replace newline characters with spaces
-					table.insert(lines, line)
-				end
 				vim.api.nvim_set_option_value("modifiable", true, { buf = ui.preview_buf_id })
-				vim.api.nvim_buf_set_lines(ui.preview_buf_id, 0, -1, false, lines)
+				pcall(vim.api.nvim_buf_set_lines, ui.preview_buf_id, 0, -1, false, vim.split(data, "[\r]?\n"))
 				vim.api.nvim_set_option_value("modifiable", false, { buf = ui.preview_buf_id })
-
+				--
 				local detect_filetype = vim.filetype.match({ buf = ui.preview_buf_id, filename = bline.name })
 				pcall(vim.api.nvim_set_option_value, "filetype", detect_filetype, { buf = ui.preview_buf_id })
 				if config.search_mode == 1 and #bline.grep_results > 0 then
