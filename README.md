@@ -83,6 +83,7 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 - ":" in search prompt to run shell command
 - C-e show edits
 - C-c show config
+- C-z toggle between netrw & broil view.
 
 # Configuration
 
