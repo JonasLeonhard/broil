@@ -76,7 +76,8 @@ local Config = {
 		["target"] = "no-enter",
 		["tmp"] = "no-enter",
 		["vendor"] = "no-enter",
-		["zig-cache"] = "no-enter",
+		[".zig-cache"] = "no-enter",
+		["zig-out"] = "no-enter"
 	},
 
 	-- runtime configs
