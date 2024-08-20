@@ -72,7 +72,7 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 
 ## default Keybindy:
 - gg and g
-- C-j, C-k, j, k - movement
+- C-j, C-k, j, k, C-u, C-d - movement & scrolling
 - C-l or CR - Open selected
 - C-h - go dir up
 - C-w k - change window up
