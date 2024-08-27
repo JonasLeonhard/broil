@@ -19,6 +19,7 @@ local ui = {
 	tree_win = {
 		height = math.ceil(vim.o.lines * 0.6) - 1, -- 60% height
 	},
+	original_win_id = nil,
 	-- #Search
 	search_win_id = nil,
 	search_term = "", -- current search filter,
@@ -581,6 +582,8 @@ end
 
 --- open a floating window with a tree view of the current file's directory
 ui.open = function()
+	ui.original_win_id = vim.api.nvim_get_current_win()
+
 	-- we are already open
 	if ui.search_win_id then
 		vim.api.nvim_set_current_win(ui.search_win_id)
@@ -632,6 +635,11 @@ ui.close = function()
 	end
 
 	vim.api.nvim_command("stopinsert")
+
+	-- reset to the window we originally opened from
+	if ui.original_win_id then
+		vim.api.nvim_set_current_win(ui.original_win_id)
+	end
 end
 
 ui.on_close_listener = function()
