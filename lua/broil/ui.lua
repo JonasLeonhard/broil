@@ -636,9 +636,9 @@ ui.close = function()
 
 	vim.api.nvim_command("stopinsert")
 
-	-- reset to the window we originally opened from
+	-- try to reset to the window we originally opened from
 	if ui.original_win_id then
-		vim.api.nvim_set_current_win(ui.original_win_id)
+		pcall(vim.api.nvim_set_current_win, ui.original_win_id)
 	end
 end
 
