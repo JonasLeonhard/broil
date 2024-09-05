@@ -53,6 +53,7 @@ ui.create_tree_window = function()
 	vim.api.nvim_set_option_value("tabstop", 3, { buf = ui.buf_id })
 	vim.api.nvim_set_option_value("shiftwidth", 3, { buf = ui.buf_id })
 	vim.api.nvim_set_option_value("expandtab", true, { buf = ui.buf_id })
+	vim.api.nvim_set_option_value("cursorline", true, { win = ui.win_id })
 
 	vim.api.nvim_set_option_value("signcolumn", "yes", { win = ui.win_id })
 	vim.api.nvim_set_option_value("foldtext", "BroilFoldText()", { win = ui.win_id })
