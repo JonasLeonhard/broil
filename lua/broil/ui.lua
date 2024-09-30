@@ -261,16 +261,16 @@ ui.set_info_bar_message = function(msg, type)
 		end
 
 		msg = root_path
-			.. "Hit '"
-			.. config.mappings.open_selected_node
-			.. "|"
-			.. config.mappings.open_selected_node2
-			.. "' to open, '"
-			.. config.mappings.select_prev_node
-			.. "|"
-			.. config.mappings.select_next_node
-			.. "' to move, '(exact), ^(starts), (ends)$, !(not), | (or)'  or  ':<verb>' to execute a command."
-			.. time_str
+				.. "Hit '"
+				.. config.mappings.open_selected_node
+				.. "|"
+				.. config.mappings.open_selected_node2
+				.. "' to open, '"
+				.. config.mappings.select_prev_node
+				.. "|"
+				.. config.mappings.select_next_node
+				.. "' to move, '(exact), ^(starts), (ends)$, !(not), | (or)'  or  ':<verb>' to execute a command."
+				.. time_str
 	end
 
 	-- Set the buffer lines
@@ -384,14 +384,15 @@ ui.set_verb = function(verb)
 	elseif replaced_verb_variables == "" then
 		ui.set_info_bar_message(
 			"Type a "
-				.. vim.o.shell
-				.. " command to execute. 󰋗 :['%<space>' = 'selection_path', '%n' = 'selection_name', '.<space>' = 'view_path'], Hit 'enter' to execute it",
+			.. vim.o.shell
+			..
+			" command to execute. 󰋗 :['%<space>' = 'selection_path', '%n' = 'selection_name', '.<space>' = 'view_path'], Hit 'enter' to execute it",
 			"verb"
 		)
 	elseif
-		replaced_verb_variables:find("%% ")
-		or replaced_verb_variables:find("%. ")
-		or replaced_verb_variables:find("%%n")
+			replaced_verb_variables:find("%% ")
+			or replaced_verb_variables:find("%. ")
+			or replaced_verb_variables:find("%%n")
 	then
 		local tree_cursor = vim.api.nvim_win_get_cursor(ui.win_id)
 		local cursor_line = vim.api.nvim_buf_get_lines(ui.buf_id, tree_cursor[1] - 1, tree_cursor[1], false)[1]
@@ -403,7 +404,9 @@ ui.set_verb = function(verb)
 		local bline_name = bline and bline.name or ""
 
 		if bline_path == "" then
-			bline_path = root_node.path .. "/" .. cursor_line:gsub("^%s*", ""):gsub("%[%d+%]$", "") -- remove leading whitespace and pathid
+			bline_path = root_node.path ..
+					"/" ..
+					cursor_line:gsub("^%s*", ""):gsub("%[%d+%]$", "") -- remove leading whitespace and pathid
 		end
 
 		if bline_name == "" then
@@ -740,20 +743,20 @@ ui.open_edits_float = function()
 	ui.editor:open_edits_float(ui.win_id)
 	ui.set_info_bar_message(
 		"Edits: '"
-			.. config.mappings.stage_edit
-			.. "' = stage, '"
-			.. config.mappings.stage_all_edits
-			.. "|"
-			.. config.mappings.stage_all_edits2
-			.. "' = stageall, '"
-			.. config.mappings.unstage_edit
-			.. "' = unstage, '"
-			.. config.mappings.unstage_all_edits
-			.. "' = unstageall, '"
-			.. config.mappings.undo_edit
-			.. "' = undo edit, '"
-			.. config.mappings.apply_staged_edits
-			.. "' = apply staged",
+		.. config.mappings.stage_edit
+		.. "' = stage, '"
+		.. config.mappings.stage_all_edits
+		.. "|"
+		.. config.mappings.stage_all_edits2
+		.. "' = stageall, '"
+		.. config.mappings.unstage_edit
+		.. "' = unstage, '"
+		.. config.mappings.unstage_all_edits
+		.. "' = unstageall, '"
+		.. config.mappings.undo_edit
+		.. "' = undo edit, '"
+		.. config.mappings.apply_staged_edits
+		.. "' = apply staged",
 		"edits"
 	)
 end
@@ -765,7 +768,8 @@ end
 
 ui.open_config_float = function()
 	config:open_config_float(ui.win_id)
-	ui.set_info_bar_message("Type: '<KEY>' to toggle setting. ESC or <C-q> to close.")
+	ui.set_info_bar_message("Type: '<KEY>' to toggle setting. " ..
+		config.mappings.close .. " or " .. config.mappings.open_config_float .. " to close.")
 end
 
 ui.open_in_netrw = function()
