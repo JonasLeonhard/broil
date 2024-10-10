@@ -147,12 +147,14 @@ ui.create_preview_window = function()
 	vim.api.nvim_create_autocmd({ "CursorMoved" }, {
 		buffer = ui.buf_id,
 		callback = function()
-			ui.preview_hovered_node()
+			ui.preview_hovered_node(false)
 		end,
 	})
 end
 
-ui.preview_hovered_node = function()
+--- @param bool preview_full_file_or_dir only preview the full file or dir if we actually entered the preview window.
+--- Otherwise its enough to display as many lines as we can fit in the preview window
+ui.preview_hovered_node = function(preview_full_file_or_dir)
 	utils.debounce("preview", function()
 		if not ui.win_id then
 			return

@@ -3,6 +3,7 @@ local config = require('broil.config')
 local fzf = require('fzf_lib')
 local utils = require('broil.utils')
 local cache = require('broil.cache')
+local async = require('plenary.async')
 
 local Tree_Builder = {}
 Tree_Builder.__index = Tree_Builder
@@ -87,6 +88,8 @@ function Tree_Builder:gather_lines()
     local open_dir_id = table.remove(open_dirs, 1)
     if (open_dir_id) then
       local child_id = self:next_child(open_dir_id)
+      async.util.scheduler() -- allow other tasks to run from time to time, this should fix freezes/performance issues for large directories
+
       if (child_id) then
         -- process just one bline of this dir, then append it to the queue again
         table.insert(open_dirs, open_dir_id)
