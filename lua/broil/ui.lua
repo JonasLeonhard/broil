@@ -5,6 +5,7 @@ local Editor = require("broil.editor")
 local Path = require("plenary.path")
 local config = require("broil.config")
 local async = require("plenary.async")
+local keymap = require("broil.keymap")
 
 local ui = {
 	-- #State
@@ -602,13 +603,12 @@ ui.open = function()
 	-- focus the search window
 	vim.api.nvim_set_current_win(ui.search_win_id)
 
+	keymap.attach(ui)
+
 	-- 4. attach event listeners
 	ui.on_search_input_listener()
 	ui.on_yank()
 	ui.on_close_listener()
-
-	local keymap = require("broil.keymap")
-	keymap.attach()
 
 	ui.render()
 end

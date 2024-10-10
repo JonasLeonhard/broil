@@ -1,18 +1,17 @@
 local keymap = {}
 
 local config = require("broil.config")
-local ui = require("broil.ui")
 local utils = require("broil.utils")
 
 keymap.map = function(buf_id, mode, lhs, rhs, opts)
 	if lhs == "" then
 		return
 	end
-	opts = vim.tbl_deep_extend("force", { buffer = buf_id, silent = true, nowait = true }, opts or {})
+	opts = vim.tbl_deep_extend("force", { buffer = buf_id, silent = true, remap = true }, opts or {})
 	vim.keymap.set(mode, lhs, rhs, opts)
 end
 
-keymap.attach = function()
+keymap.attach = function(ui)
 	keymap.map(ui.buf_id, "n", config.mappings.help, ui.help, { desc = "Help" })
 
 	keymap.map(ui.search_buf_id, { "n", "i" }, config.mappings.close, ui.close, { desc = "Close" })
