@@ -101,6 +101,9 @@ local Config = {
 	mkdir_command = default_mkdir_command(),
 	touch_command = default_touch_command(),
 
+	-- switch to netrw command :netrw_command .. ui.open_dir
+	netrw_command = "Hexplore ",
+
 	-- internal config window
 	buf_id = vim.api.nvim_create_buf(false, true),
 	win_id = nil,

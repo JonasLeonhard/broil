@@ -65,7 +65,8 @@ end
 
 broil.open = function(path)
 	if path then
-		ui.open_path = path
+		-- Remove trailing slash if it exists
+		ui.open_path = path:gsub("/$", "")
 	else
 		ui.open_path = utils.get_path_of_current_window_or_nvim_cwd()
 	end

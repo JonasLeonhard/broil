@@ -777,7 +777,7 @@ end
 ui.open_in_netrw = function()
 	ui.close()
 	-- open the current directory in netrw
-	vim.api.nvim_command("Hexplore " .. ui.open_dir)
+	vim.api.nvim_command(config.netrw_command .. ui.open_dir)
 end
 
 ui.close_config_float = function()
