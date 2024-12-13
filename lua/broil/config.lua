@@ -1,42 +1,9 @@
-local default_rm_command = function()
-	if string.match(vim.o.shell, "/nu$") then
-		return "rm -r --trash <FROM>"
-	end
-
-	return "rm -r <FROM>"
-end
-
-local default_mv_command = function()
-	return "mv <FROM> <TO>"
-end
-
-local default_mkdir_command = function()
-	if string.match(vim.o.shell, "/nu$") then
-		return "mkdir <TO>"
-	end
-
-	return "mkdir -p <TO>"
-end
-
-local default_touch_command = function()
-	if string.match(vim.o.shell, "/nu$") then
-		return "mkdir (dirname <TO>); touch <TO>"
-	end
-
-	return "mkdir -p (dirname <TO>); touch <TO>"
-end
-
-local default_cp_command = function()
-	return "cp <FROM> <TO>"
-end
-
 local Config = {
 	mappings = {
 		-- general
 		help = "?",
 		close = "<C-q>",
 		pop_history = "<C-p>",
-		open_edits_float = "<C-e>",
 		open_config_float = "<C-c>",
 
 		open_in_netrw = "<C-z>",
@@ -49,15 +16,6 @@ local Config = {
 		open_selected_node = "<CR>",
 		open_selected_node2 = "<C-l>",
 		open_parent_dir = "<C-h>",
-
-		-- edits window
-		stage_edit = "s",
-		stage_all_edits = "S",
-		stage_all_edits2 = "<c-s>",
-		unstage_edit = "u",
-		unstage_all_edits = "U",
-		undo_edit = "x",
-		apply_staged_edits = "<c-y>",
 	},
 	special_paths = {
 		[".DS_Store"] = "hide",
@@ -92,14 +50,6 @@ local Config = {
 	file_size_preview_limit_mb = 5,
 
 	shell = vim.o.shell,
-	shell_exec_flag = "-c", -- will result in `sh -c 'command_below'`
-
-	-- filesystem commands
-	rm_command = default_rm_command(),
-	mv_command = default_mv_command(),
-	cp_command = default_cp_command(),
-	mkdir_command = default_mkdir_command(),
-	touch_command = default_touch_command(),
 
 	-- switch to netrw command :netrw_command .. ui.open_dir
 	netrw_command = "Hexplore ",

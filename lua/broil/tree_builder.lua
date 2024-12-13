@@ -30,7 +30,6 @@ function Tree_Builder:new(path, options)
   tree_builder.open_path = path                      -- the original open path
   tree_builder.optimal_lines = options.optimal_lines -- can be nil for infinite search
   tree_builder.pattern = options.pattern
-  tree_builder.current_edits = options.current_edits
 
   tree_builder.fzf_slab = fzf.allocate_slab()
   tree_builder.fzf_pattern_obj = fzf.parse_pattern(options.pattern, config.fzf_case_mode, config.fzf_fuzzy_match)
@@ -56,8 +55,6 @@ function Tree_Builder:new(path, options)
     grep_results = {},
   })
 
-  local edit = tree_builder.current_edits[bline.id] or tree_builder.current_edits['-' .. bline.id]
-  bline.edit = edit
   tree_builder.root_id = bline.id
   table.insert(tree_builder.blines, bline.id, bline)
 
@@ -240,19 +237,6 @@ function Tree_Builder:create_bline(parent_bline, name, type)
   local org_path = parent_bline.path .. '/' .. name
   local path = org_path
 
-  local cached_id = cache.bline_id_cache[path]
-  local edit
-  -- check if we edited the line
-  if (cached_id) then
-    edit = self.current_edits[tostring(cached_id)] or self.current_edits['-' .. tostring(cached_id)]
-
-    if (edit and edit.path_from and edit.path_to) then -- edited, display the edit name & change path
-      path = edit.path_to
-      local path_to_no_slash = edit.path_to:gsub("%/$", "")
-      name = vim.fn.fnamemodify(path_to_no_slash, ':t')
-    end
-  end
-
   -- return the cached node id if it already exist, cache it otherwise
   local relative_path = string.gsub(path, utils.escape_pattern(self.path .. '/'), '')
   local score = 10000 - parent_bline.depth + 1 -- // we rank less deep entries higher
@@ -306,7 +290,6 @@ function Tree_Builder:create_bline(parent_bline, name, type)
     fzf_pos = fzf_pos or {},
     nb_kept_children = 0,
     unlisted = 0,
-    edit = edit,
     grep_results = grep_results or {},
   })
 end

@@ -1,7 +1,6 @@
 local keymap = {}
 
 local config = require("broil.config")
-local utils = require("broil.utils")
 
 keymap.map = function(buf_id, mode, lhs, rhs, opts)
 	if lhs == "" then
@@ -94,56 +93,6 @@ keymap.attach = function(ui)
 		ui.pop_history,
 		{ desc = "Pop history item" }
 	)
-
-	keymap.map(ui.buf_id, { "n", "i" }, config.mappings.open_edits_float, ui.open_edits_float)
-	keymap.map(ui.search_buf_id, { "n", "i" }, config.mappings.open_edits_float, ui.open_edits_float)
-
-	-- internal
-	keymap.map(ui.buf_id, { "n" }, "p", ui.paste)
-
-	-- Editor
-	keymap.map(ui.editor.buf_id, { "n", "i" }, config.mappings.close, ui.close_edits_float)
-	keymap.map(ui.editor.buf_id, { "n", "i" }, config.mappings.open_edits_float, ui.close_edits_float)
-	keymap.map(ui.editor.buf_id, { "n" }, config.mappings.stage_edit, function()
-		ui.editor:stage_edit()
-	end)
-	keymap.map(ui.editor.buf_id, { "v" }, config.mappings.stage_edit, function()
-		ui.editor:stage_edit_range()
-	end)
-	keymap.map(ui.editor.buf_id, { "n", "v" }, config.mappings.stage_all_edits, function()
-		ui.editor:stage_all_edits()
-	end)
-	keymap.map(ui.editor.buf_id, { "n", "v" }, config.mappings.stage_all_edits2, function()
-		ui.editor:stage_all_edits()
-	end)
-	keymap.map(ui.editor.buf_id, { "n" }, config.mappings.unstage_edit, function()
-		ui.editor:unstage_edit()
-	end)
-	keymap.map(ui.editor.buf_id, { "v" }, config.mappings.unstage_edit, function()
-		ui.editor:unstage_edit_range()
-	end)
-	keymap.map(ui.editor.buf_id, { "n", "v" }, config.mappings.unstage_all_edits, function()
-		ui.editor:unstage_all_edits()
-	end)
-	keymap.map(ui.editor.buf_id, { "n" }, config.mappings.undo_edit, function()
-		ui.editor:undo_edit()
-		utils.debounce("undo_edit", function()
-			ui.render()
-		end, 100)()
-	end)
-	keymap.map(ui.editor.buf_id, { "v" }, config.mappings.undo_edit, function()
-		ui.editor:undo_edit_range()
-		utils.debounce("undo_edit_range", function()
-			ui.render()
-		end, 100)()
-	end)
-	keymap.map(ui.editor.buf_id, { "n", "v" }, config.mappings.apply_staged_edits, function()
-		ui.editor:apply_staged_edits(function()
-			utils.debounce("apply_staged_edits", function()
-				ui.render()
-			end, 100)()
-		end)
-	end)
 
 	-- Config
 	keymap.map(ui.buf_id, { "n", "i" }, config.mappings.open_config_float, ui.open_config_float)

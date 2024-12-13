@@ -1,10 +1,7 @@
-# Broil = Broot + Oil
-Edit and search your directory tree like a buffer. 
-The explosive mixture of <a href="https://github.com/Canop/broot" target="_blank">Broot</a> and <a href="https://github.com/stevearc/oil.nvim">Oil</a> you never knew you needed!. 
+# Broil
+Fuzzy Search your directory tree.
 
 ⚠️ This Plugin is in Beta. So expect stuff to not 100% work and expect breaking changes at any point.
-Especially make sure that the paths in your edits actually match what was beeing edited!
-
 tested on: Latest master branch version of neovim, (Macos & Linux)
 
 # Features
@@ -31,18 +28,11 @@ is supported:
 | `!^music` | inverse-prefix-exact-match | Items that do not start with `music` |
 | `!.mp3$`  | inverse-suffix-exact-match | Items that do not end with `.mp3`    |
 
-## Cross Directory Buffer Editing:
-~ ⚠️ NOTE: this feature is currently experimental and not quite stable, so make sure to look at the edits build from your buffer changes. This feature is not quite ironed out yet! ~
+## Toggle Open Directory to your File explorer
 
-- create, copy, move, rename & delete
-...by just editing the current tree view buffer:
+Do you want to edit the current tree directory? You can press Ctrl-z to switch the current directory tree-view to netrw (or any other file explorer like Oil - see config.netrw_command).
 
-https://github.com/JonasLeonhard/broil/assets/54074887/1f0843e6-03b7-4210-a0a9-cba2be84e4fd
-
-your edits stay persistent across directories and searches, only you staged changes will get applied. And if you dont like them, you can undo them in a batch - or one by one:
-
-https://github.com/JonasLeonhard/broil/assets/54074887/40439dad-6d9c-44a4-98a3-fd8e504124e7
-
+## Terminal Commands
 
 - run any terminal command like touch, mkdir, ls, chmod and see the output
 
@@ -81,7 +71,6 @@ https://github.com/JonasLeonhard/broil/assets/54074887/e2cabe68-4648-447b-bc28-f
 - C-w h - change window left
 - C-q - close window
 - ":" in search prompt to run shell command
-- C-e show edits
 - C-c show config
 - C-z toggle between netrw & broil view.
 
@@ -106,8 +95,20 @@ return {
     }
   },
   opts = {
-    -- rm_command = 'rm <FROM>', -- optional...(default 'rm'). you could use a trash command here. Or rm --trash for nushell...
     -- ... you can find more opts in ":h broil" or lua/broil/config.lua
+    -- netrw_command = "Oil " -- this switches the current tree-view to netrw
+    -- if you are using Oil: add this <Ctrl-z> keybind to the oil configuration to switch back to broils tree-view:
+    -- -- in oil.nvim keymaps
+    -- ["<C-z>"] = {
+    --   desc = "Toggle Broil",
+    --   callback = function()
+    --     local oil = require("oil");
+    --     local broil = require("broil")
+    --     local current_dir = oil.get_current_dir()
+    --     oil.close()
+    --     broil.open(current_dir)
+    --   end
+    -- }
   },
   keys = {
     {
@@ -124,6 +125,22 @@ return {
 }
 ```
 </details>
+
+# Highlights
+
+Want your own color Scheme?
+```lua
+-- highlights (set these after broil init was already called)
+vim.api.nvim_command("highlight BroilPreviewMessageFillchar guifg=#585b70")
+vim.api.nvim_command("highlight BroilPreviewMessage guifg=#b4befe")
+vim.api.nvim_command("highlight BroilSearchTerm guifg=#f9e2af")
+vim.api.nvim_command("highlight BroilDirLine guifg=#89b4fa")
+vim.api.nvim_command("highlight BroilPruningLine guifg=#a6adc8")
+vim.api.nvim_command("highlight BroilRelativeLine guifg=#74c7ec")
+vim.api.nvim_command("highlight BroilInactive guifg=#a6adc8")
+vim.api.nvim_command("highlight BroilActive guifg=#f2cdcd")
+vim.api.nvim_command("highlight BroilSearchIcon guifg=#bac2de")
+```
 
 # Contributing
 Want to help me make this plugin better? Create a pull request!

@@ -1,7 +1,6 @@
 local Tree_Builder = require("broil.tree_builder")
 local Tree = require("broil.tree")
 local utils = require("broil.utils")
-local Editor = require("broil.editor")
 local Path = require("plenary.path")
 local config = require("broil.config")
 local async = require("plenary.async")
@@ -33,7 +32,6 @@ local ui = {
 	preview_win_id = nil,
 	preview_tree = nil,
 	-- #Tree Edits
-	editor = Editor:new(),
 	spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
 	spinner_frame = 1,
 	spinner_timer = nil,
@@ -51,9 +49,6 @@ ui.create_tree_window = function()
   endfunction
   ]])
 	vim.api.nvim_set_option_value("modifiable", true, { buf = ui.buf_id })
-	vim.api.nvim_set_option_value("tabstop", 3, { buf = ui.buf_id })
-	vim.api.nvim_set_option_value("shiftwidth", 3, { buf = ui.buf_id })
-	vim.api.nvim_set_option_value("expandtab", true, { buf = ui.buf_id })
 	vim.api.nvim_set_option_value("cursorline", true, { win = ui.win_id })
 
 	vim.api.nvim_set_option_value("signcolumn", "yes", { win = ui.win_id })
@@ -70,14 +65,6 @@ ui.create_tree_window = function()
 	ui.win_id = vim.api.nvim_get_current_win()
 	vim.api.nvim_win_set_buf(ui.win_id, ui.buf_id)
 	vim.wo[ui.win_id].conceallevel = 3
-
-	-- build edits: todo, only call this after actual changes, not when the tree rerenders...
-	vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
-		buffer = ui.buf_id,
-		callback = function()
-			ui.editor:handle_edits(ui.tree, true)
-		end,
-	})
 end
 
 ui.create_search_window = function()
@@ -102,6 +89,8 @@ ui.create_search_window = function()
 	ui.set_search("")
 	vim.api.nvim_command("setlocal nonumber")
 	vim.api.nvim_command("setlocal norelativenumber")
+	vim.api.nvim_command("setlocal buftype=prompt")
+	vim.fn.prompt_setprompt(ui.search_buf_id, '')
 end
 
 --- create the info bar at the top
@@ -175,7 +164,6 @@ ui.preview_hovered_node = function(preview_full_file_or_dir)
 					pattern = "",
 					optimal_lines = ui.tree_win.height,
 					maximum_search_time_sec = 0,
-					current_edits = ui.editor.current_edits,
 				})
 				local tree_build = builder:build_tree()
 				ui.prev_tree = Tree:new({
@@ -248,7 +236,7 @@ ui.preview_hovered_node = function(preview_full_file_or_dir)
 end
 
 --- @param msg string|nil
---- @param type 'verb'|'search'|'edits'|nil
+--- @param type 'verb'|'search'|nil
 --- highlights everything in '' quotes
 ui.set_info_bar_message = function(msg, type)
 	if not msg then
@@ -281,8 +269,6 @@ ui.set_info_bar_message = function(msg, type)
 	if type == "search" then
 		icon = " " .. ui.spinner_frames[ui.spinner_frame] .. " "
 		ui.spinner_frame = (ui.spinner_frame % #ui.spinner_frames) + 1
-	elseif type == "edits" then
-		icon = " 󱇧 "
 	end
 	vim.api.nvim_buf_set_lines(ui.info_buf_id, 0, -1, false, { icon .. msg })
 
@@ -609,36 +595,30 @@ ui.open = function()
 
 	-- 4. attach event listeners
 	ui.on_search_input_listener()
-	ui.on_yank()
 	ui.on_close_listener()
 
 	ui.render()
 end
 
 ui.close = function()
-	if ui.win_id ~= nil then
-		vim.api.nvim_win_close(ui.win_id, true)
-		ui.win_id = nil
+	local function close_window_and_buffer(win_id)
+		if win_id ~= nil then
+			-- Get the buffer associated with the window
+			local buf_id = vim.api.nvim_win_get_buf(win_id)
+			-- Close the window first
+			vim.api.nvim_win_close(win_id, true)
+			-- Force close the buffer
+			pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
+			return nil
+		end
+		return nil
 	end
 
-	if ui.search_win_id ~= nil then
-		vim.api.nvim_win_close(ui.search_win_id, true)
-		ui.search_win_id = nil
-	end
-
-	if ui.info_win_id ~= nil then
-		vim.api.nvim_win_close(ui.info_win_id, true)
-		ui.info_win_id = nil
-	end
-
-	if ui.preview_win_id ~= nil then
-		vim.api.nvim_win_close(ui.preview_win_id, true)
-		ui.preview_win_id = nil
-	end
-
-	if ui.editor.win_id ~= nil then
-		ui.editor:close_edits_float()
-	end
+	-- Close windows and their associated buffers
+	ui.win_id = close_window_and_buffer(ui.win_id)
+	ui.search_win_id = close_window_and_buffer(ui.search_win_id)
+	ui.info_win_id = close_window_and_buffer(ui.info_win_id)
+	ui.preview_win_id = close_window_and_buffer(ui.preview_win_id)
 
 	vim.api.nvim_command("stopinsert")
 
@@ -675,13 +655,6 @@ ui.on_close_listener = function()
 	})
 
 	vim.api.nvim_create_autocmd({ "WinClosed" }, {
-		buffer = ui.editor.buf_id,
-		callback = function()
-			ui.close_edits_float()
-		end,
-	})
-
-	vim.api.nvim_create_autocmd({ "WinClosed" }, {
 		buffer = config.buf_id,
 		callback = function()
 			ui.close_config_float()
@@ -698,74 +671,9 @@ ui.pop_history = function()
 	end
 end
 
---- if a yanked line has a blineId [id], we only copy the bline name and id,
---- this prevents us from copying relative_paths when searching
-ui.on_yank = function()
-	vim.api.nvim_create_autocmd({ "TextYankPost" }, {
-		buffer = ui.buf_id,
-		callback = function()
-			local event = vim.v.event
-			local yanked_text = event.regcontents
-
-			for i, line in ipairs(yanked_text) do
-				local path_id = utils.get_bid_by_match(line)
-
-				-- change the yanked text if we yanked a bline
-				if path_id then
-					local bline = ui.tree:find_by_id(path_id)
-					if bline then
-						local new_text = bline.name
-						if bline.file_type == "directory" then
-							new_text = new_text .. "/"
-						end
-						new_text = new_text .. "[" .. path_id .. "]"
-
-						yanked_text[i] = new_text
-					end
-				end
-			end
-
-			-- Now set the yank register to the processed text
-			vim.fn.setreg(event.regname, yanked_text, event.regtype)
-		end,
-	})
-end
-
--- we override the native paste functionality, because we strip out relative paths on yank
-ui.paste = function()
-	vim.api.nvim_command('normal! ""p')
-end
-
 ui.set_search = function(search_term)
 	ui.search_term = search_term
 	vim.api.nvim_buf_set_lines(ui.search_buf_id, 0, -1, false, { search_term })
-end
-
-ui.open_edits_float = function()
-	ui.editor:open_edits_float(ui.win_id)
-	ui.set_info_bar_message(
-		"Edits: '"
-		.. config.mappings.stage_edit
-		.. "' = stage, '"
-		.. config.mappings.stage_all_edits
-		.. "|"
-		.. config.mappings.stage_all_edits2
-		.. "' = stageall, '"
-		.. config.mappings.unstage_edit
-		.. "' = unstage, '"
-		.. config.mappings.unstage_all_edits
-		.. "' = unstageall, '"
-		.. config.mappings.undo_edit
-		.. "' = undo edit, '"
-		.. config.mappings.apply_staged_edits
-		.. "' = apply staged",
-		"edits"
-	)
-end
-
-ui.close_edits_float = function()
-	ui.editor:close_edits_float()
-	ui.set_info_bar_message()
 end
 
 ui.open_config_float = function()
@@ -774,10 +682,36 @@ ui.open_config_float = function()
 		config.mappings.close .. " or " .. config.mappings.open_config_float .. " to close.")
 end
 
+-- toggle the current tree_view to netrw (using config.netrw_command).
+-- use the hovered line's directory first, fallback to the current open_dir
 ui.open_in_netrw = function()
-	ui.close()
-	-- open the current directory in netrw
-	vim.api.nvim_command(config.netrw_command .. ui.open_dir)
+	local cursor_pos = vim.api.nvim_win_get_cursor(ui.win_id)
+	local cursor_y = cursor_pos[1]
+
+	if not ui.tree or cursor_y == 1 then
+		ui.close()
+		vim.api.nvim_command(config.netrw_command .. ui.open_dir)
+		return
+	end
+
+	local current_line = vim.api.nvim_buf_get_lines(ui.buf_id, cursor_y - 1, cursor_y, false)[1]
+	local bid = utils.get_bid_by_match(current_line)
+	local bline = ui.tree:find_by_id(bid)
+
+	if not bline then
+		ui.close()
+		vim.api.nvim_command(config.netrw_command .. ui.open_dir)
+		return
+	end
+
+	if bline.file_type == "directory" then
+		ui.close()
+		vim.api.nvim_command(config.netrw_command .. bline.path)
+	else
+		ui.close()
+		local file_dir = vim.fn.fnamemodify(bline.path, ":h")
+		vim.api.nvim_command(config.netrw_command .. file_dir)
+	end
 end
 
 ui.close_config_float = function()
@@ -819,7 +753,6 @@ ui.render = function(selection_id)
 			pattern = ui.search_term,
 			optimal_lines = ui.tree_win.height,
 			maximum_search_time_sec = config.maximum_search_time_sec,
-			current_edits = ui.editor.current_edits,
 		})
 
 		if new_render_started(current_render_index) then
@@ -857,12 +790,11 @@ ui.render = function(selection_id)
 			return
 		end
 
-		ui.editor:append_new_lines_from_edits(ui.tree)
+		local current_lines = vim.api.nvim_buf_get_lines(ui.tree.buf_id, 0, -1, false)
 
-		if new_render_started(current_render_index) then
-			return
+		for index, line in ipairs(current_lines) do
+			ui.tree:draw_line_extmarks(index, line, current_lines)
 		end
-		ui.editor:handle_edits(ui.tree, false)
 
 		if new_render_started(current_render_index) then
 			return
