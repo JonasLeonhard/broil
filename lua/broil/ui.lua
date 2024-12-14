@@ -239,6 +239,10 @@ end
 --- @param type 'verb'|'search'|nil
 --- highlights everything in '' quotes
 ui.set_info_bar_message = function(msg, type)
+	if (not ui.info_win_id) then
+		return
+	end
+
 	if not msg then
 		local time_str = ""
 		if ui.render_start ~= nil and ui.render_end ~= nil then
