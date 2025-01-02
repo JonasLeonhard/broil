@@ -582,7 +582,7 @@ ui.open = function()
 	ui.original_win_id = vim.api.nvim_get_current_win()
 
 	-- we are already open
-	if ui.search_win_id then
+	if ui.search_win_id and vim.api.nvim_win_is_valid(ui.search_win_id) then
 		vim.api.nvim_set_current_win(ui.search_win_id)
 		return
 	end
@@ -610,7 +610,7 @@ ui.close = function()
 			-- Get the buffer associated with the window
 			local buf_id = vim.api.nvim_win_get_buf(win_id)
 			-- Close the window first
-			vim.api.nvim_win_close(win_id, true)
+			pcall(vim.api.nvim_win_close, win_id, true)
 			-- Force close the buffer
 			pcall(vim.api.nvim_buf_delete, buf_id, { force = true })
 			return nil
